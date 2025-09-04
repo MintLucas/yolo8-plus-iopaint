@@ -15,7 +15,7 @@ def start_iopaint_server():
     model = "lama"
     device = configs.device
     host = "0.0.0.0"
-    port = "8000"
+    port = "8500"
     enable_interactive_seg = "--enable-interactive-seg"
     interactive_seg_device = configs.device
     

@@ -30,10 +30,10 @@ class BaseIOPaint:
                 x1, y1, x2, y2 = map(int, bbox)
             else:
                 x1, y1, x2, y2, conf, cls = map(int, bbox)
-            x1 = np.clip(x1 - padding, 0, width)
+            x1 = np.clip(x1 - padding - 130, 0, width)
             y1 = np.clip(y1 - padding, 0, height)
             x2 = np.clip(x2 + padding, 0, width)
-            y2 = np.clip(y2 + padding, 0, height)
+            y2 = np.clip(y2 + padding + 60, 0, height)
             mask[y1:y2, x1:x2] = 255
         return mask
 

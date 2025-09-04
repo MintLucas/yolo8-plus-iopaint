@@ -13,9 +13,14 @@ class YOLOUtils:
     def __init__(self, model_path):
         self.model = YOLO(model_path)
 
-    def get_bboxes(self, image, conf=0.75):
+    def get_bboxes(self, image, conf=0.1):
         results = self.model(image, conf=conf)
-        bboxes = results[0].boxes[0].cpu().data.numpy()
+        # bboxes = results[0].boxes[0].cpu().data.numpy()
+                # 注意：这里需要根据你的模型输出进行适配，有些可能是results[0].boxes.xyxy
+        if len(results) > 0 and len(results[0].boxes) > 0:
+            bboxes = results[0].boxes.cpu().data.numpy()
+            return bboxes
+        return []
         return bboxes
 
 

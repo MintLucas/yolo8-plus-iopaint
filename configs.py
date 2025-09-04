@@ -25,7 +25,7 @@ images_dir = f"{project_dir}/images"
 USE_IOPAINT_API = True                              
 
 # IOPaint的服务地址，除了在本项目中执行 python iopaint_server.py 启动iopaint服务外，也可以选择对接单独部署的iopaint服务
-IOPAINT_SERVER_HOST = "http://127.0.0.1:8000"
+IOPAINT_SERVER_HOST = "http://127.0.0.1:8500"
 
 # 是否cuda
 CUDA_IS_AVAILABLE = torch.cuda.is_available()

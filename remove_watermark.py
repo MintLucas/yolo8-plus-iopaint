@@ -62,10 +62,10 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
 
     # 移除单张水印
-    image_path = f"{configs.images_dir}/test.png"
+    image_path = f"{configs.images_dir}/test1.png"
     detect_and_erase(image_path, model_path, output_dir, device=device)
 
     # 移除某个目录所有图片水印
-    _test_batch(batch_dir=configs.images_dir)
+    # _test_batch(batch_dir=configs.images_dir)
 
     print("\nall done")
