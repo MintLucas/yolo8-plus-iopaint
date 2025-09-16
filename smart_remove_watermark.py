@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
     # --- 选择一个输入文件进行测试 ---
     # input_path = f"{configs.images_dir}/test1.png"
-    input_path = f"/data2/zhipeng16/datasets/output_frames/video/source.mp4"  # 修改为你的视频路径
+    input_path = f"/data2/zhipeng16/datasets/src_videos/source1_top_right.mp4"  # 修改为你的视频路径
 
     # --- 根据文件类型自动选择处理器 ---
     start_time = time.time()
