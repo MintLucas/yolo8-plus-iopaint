@@ -27,6 +27,38 @@ class SmartBaseIOPaint:
     def __init__(self, device="cpu"):
         self.device = device
 
+    def create_mask_yolo_center(self, image, bboxes, padding=1):
+        """
+        根据 [x_center, y_center, width, height] 格式的边界框创建掩码图像。
+        
+        参数:
+        :param image: 原始图像 (numpy array)
+        :param bboxes: 边界框列表，格式为 [x_center, y_center, width, height]
+        :param padding: 掩码的额外填充
+        :return: 掩码图像 (numpy array)
+        """
+        height, width = image.shape[:2]
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        for bbox in bboxes:
+            if len(bbox) >= 4:
+                # 将[x_center, y_center, width, height] 转换为 [x1, y1, x2, y2]
+                xc, yc, w, h = map(int, bbox[:4])
+                x1 = int(xc - w / 2)
+                y1 = int(yc - h / 2)
+                x2 = int(xc + w / 2)
+                y2 = int(yc + h / 2)
+
+                # 根据原函数的 padding 逻辑调整坐标
+                x1 = np.clip(x1 - padding, 0, width)
+                y1 = np.clip(y1 - padding, 0, height)
+                x2 = np.clip(x2 + padding, 0, width)
+                y2 = np.clip(y2 + padding, 0, height)
+                
+                # 在掩码上绘制矩形
+                mask[y1:y2, x1:x2] = 255
+                
+        return mask
     def create_mask(self, image, bboxes, padding=1):
         """
         根据边界框创建掩码图像

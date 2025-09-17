@@ -18,6 +18,7 @@ import configs
 from smart_yolo_utils import SmartYOLOUtils
 from smart_iopaint_utils import SmartIOPaintApiUtil, SmartIOPaintCmdUtil
 import numpy as np
+from voting_video2 import process_video_for_watermark
 
 # --- 全局配置 ---
 output_dir = configs.cache_dir  # 输出目录
@@ -86,6 +87,10 @@ def process_video(video_path: str, mode: str = 'fixed'):
 
     # --- 固定模式逻辑 ---
     if mode == 'fixed':
+        bboxes = process_video_for_watermark(video_path=video_path, model_path=model_path, conf = 0.2)
+        dummy_image = np.zeros((height, width, 3), dtype=np.uint8)
+        fixed_mask = iopaint_obj.create_mask_yolo_center(dummy_image, [bboxes])
+    elif mode == "oldfixed":
         print("固定模式: 正在分析视频前3秒以确定通用mask...")
         detected_bboxes = []
         # 分析前3秒的帧
@@ -167,7 +172,7 @@ if __name__ == "__main__":
 
     # --- 选择一个输入文件进行测试 ---
     # input_path = f"{configs.images_dir}/test1.png"
-    input_path = f"/data2/zhipeng16/datasets/src_videos/source1_top_right.mp4"  # 修改为你的视频路径
+    input_path = f"/workspace/work/zhipeng16/datasets/videos/source.mp4"  # 修改为你的视频路径
 
     # --- 根据文件类型自动选择处理器 ---
     start_time = time.time()
