@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM 前端交互页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .task-selection button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, opacity 0.3s ease;
+            margin-right: 10px;
+            opacity: 0.6;
+        }
+
+        .task-selection button:hover {
+            background-color: #0056b3;
+        }
+
+        .task-selection button.active {
+            background-color: #28a745;
+            opacity: 1;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .controls select, .controls input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 15px;
+            min-width: 150px;
+        }
+
+        #dynamicModelControls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 10px;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        #dynamicModelControls .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        #dynamicModelControls label {
+            margin-bottom: 5px;
+            font-weight: normal;
+            color: #666;
+            font-size: 14px;
+        }
+        #dynamicModelControls input[type="number"],
+        #dynamicModelControls select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+
+        .input-sections {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 25px;
+            flex-grow: 1;
+        }
+
+        .input-sections .input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-sections label {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+            font-size: 16px;
+        }
+
+        .input-sections textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.6;
+            min-height: 200px;
+            resize: vertical;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .actions button, .actions input[type="file"] {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .actions button.submit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .actions button.submit:hover {
+            background-color: #0056b3;
+        }
+
+        .actions button.save {
+            background-color: #28a745;
+            color: white;
+        }
+        .actions button.save:hover {
+            background-color: #218838;
+        }
+
+        /* 复制按钮样式 */
+        .actions button.copy {
+            background-color: #6c757d; /* 灰色 */
+            color: white;
+            margin-left: 10px; /* 与其他按钮的间距 */
+        }
+        .actions button.copy:hover {
+            background-color: #5a6268;
+        }
+
+
+        .actions input[type="file"] {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 10px 20px;
+        }
+
+        .actions input[type="file"]::-webkit-file-upload-button {
+            visibility: hidden;
+        }
+        .actions input[type="file"]::before {
+            content: '上传文件';
+            display: inline-block;
+            background: #e0e0e0;
+            border: 1px solid #999;
+            border-radius: 3px;
+            padding: 8px 15px;
+            outline: none;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 10pt;
+            margin-right: 5px;
+        }
+        .actions input[type="file"]:hover::before {
+            border-color: black;
+        }
+        .actions input[type="file"]:active::before {
+            background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+        }
+
+        #llmResult {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #333;
+            min-height: 100px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .input-sections {
+                flex-direction: column;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .task-selection button {
+                margin-bottom: 10px;
+            }
+            .actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            #dynamicModelControls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LLM 交互界面</h1>
+            <div class="task-selection">
+                <button id="taskDecomposition">任务拆解</button>
+                <button id="taskQuestionGeneration">任务生题</button>
+            </div>
+        </header>
+
+        <div class="controls">
+            <label for="modelSelect">选择模型:</label>
+            <select id="modelSelect">
+                <option value="">加载中...</option>
+            </select>
+            <div id="dynamicModelControls">
+                <p>模型控制参数将显示在这里...</p>
+            </div>
+        </div>
+
+        <div class="input-sections">
+            <div class="input-group">
+                <label for="userPrompt">用户输入 (User Prompt):</label>
+                <textarea id="userPrompt" placeholder="加载中..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="systemPrompt">系统提示 (System Prompt):</label>
+                <textarea id="systemPrompt" placeholder="加载中..."></textarea>
+            </div>
+        </div>
+
+        <div class="actions">
+            <input type="file" id="fileUpload" accept="image/*,.txt,.xls,.xlsx">
+            <button id="saveConfigBtn" class="save">保存配置</button>
+            <button id="submitBtn" class="submit">提交</button>
+        </div>
+
+        <div id="llmResultContainer"> <div id="llmResult">
+                LLM 生成的结果将显示在这里...
+            </div>
+            <div style="text-align: right; margin-top: 10px;"> <button id="copyResultBtn" class="copy">一键复制结果</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskDecompositionBtn = document.getElementById('taskDecomposition');
+            const taskQuestionGenerationBtn = document.getElementById('taskQuestionGeneration');
+            const modelSelect = document.getElementById('modelSelect');
+            const dynamicModelControlsDiv = document.getElementById('dynamicModelControls');
+            const userPromptTextarea = document.getElementById('userPrompt');
+            const systemPromptTextarea = document.getElementById('systemPrompt');
+            const fileUploadInput = document.getElementById('fileUpload');
+            const submitBtn = document.getElementById('submitBtn');
+            const saveConfigBtn = document.getElementById('saveConfigBtn');
+            const llmResultDiv = document.getElementById('llmResult');
+            const copyResultBtn = document.getElementById('copyResultBtn'); // 新增：复制按钮
+
+            let currentTask = '任务拆解'; // 默认任务
+            let allModelConfigs = {}; // 存储所有模型的配置，从后端加载
+
+            // --- 定义一个通用的默认模型配置 ---
+            const COMMON_DEFAULT_MODEL_CONFIG = {
+                max_tokens_options: ["100", "200", "500", "1000", "2000"],
+                default_max_tokens: "500",
+                temperature: "0.7",
+                top_p: "0.9"
+            };
+
+            // --- 辅助函数：设置任务按钮的激活状态 ---
+            function setActiveTaskButton(task) {
+                taskDecompositionBtn.classList.remove('active');
+                taskQuestionGenerationBtn.classList.remove('active');
+                if (task === '任务拆解') {
+                    taskDecompositionBtn.classList.add('active');
+                } else if (task === '任务生题') {
+                    taskQuestionGenerationBtn.classList.add('active');
+                }
+                currentTask = task;
+            }
+
+            // --- 加载初始配置函数 ---
+
+            async function loadModels() {
+                try {
+                    const response = await fetch('/get_all_model_type');
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const models = await response.json();
+                    modelSelect.innerHTML = '';
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '请选择模型';
+                    modelSelect.appendChild(defaultOption);
+
+                    models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('加载模型列表失败:', error);
+                    modelSelect.innerHTML = '<option value="">加载失败</option>';
+                }
+            }
+
+            async function loadDefaultPrompts() {
+                try {
+                    const response = await fetch('/get_default_prompts');
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const prompts = await response.json();
+                    userPromptTextarea.value = prompts.user_prompt;
+                    systemPromptTextarea.value = prompts.system_prompt;
+                } catch (error) {
+                    console.error('加载默认提示文本失败:', error);
+                    userPromptTextarea.placeholder = '加载失败';
+                    systemPromptTextarea.placeholder = '加载失败';
+                }
+            }
+
+            async function loadOutputConfig() {
+                try {
+                    const response = await fetch('/get_output_config');
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    allModelConfigs = await response.json();
+                } catch (error) {
+                    console.error('加载输出配置失败:', error);
+                    dynamicModelControlsDiv.innerHTML = '<p>加载模型控制参数失败。</p>';
+                }
+            }
+
+            async function loadSavedConfig() {
+                try {
+                    const response = await fetch('/load_saved_config');
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const savedConfig = await response.json();
+
+                    if (savedConfig.model_name && modelSelect.querySelector(`option[value="${savedConfig.model_name}"]`)) {
+                        modelSelect.value = savedConfig.model_name;
+                        displayModelControls(modelSelect.value, savedConfig);
+                    } else {
+                         displayModelControls('', savedConfig);
+                    }
+
+                    if (savedConfig.user_prompt) userPromptTextarea.value = savedConfig.user_prompt;
+                    if (savedConfig.system_prompt) systemPromptTextarea.value = savedConfig.system_prompt;
+
+                    setActiveTaskButton(currentTask);
+
+                } catch (error) {
+                    console.warn('加载保存的配置失败，将加载默认值:', error);
+                    setActiveTaskButton(currentTask);
+                    displayModelControls('');
+                }
+            }
+
+
+            // --- 根据选择的模型动态显示控制参数 ---
+            function displayModelControls(selectedModelId, savedConfig = {}) {
+                dynamicModelControlsDiv.innerHTML = '';
+
+                const modelConfig = allModelConfigs[selectedModelId] || COMMON_DEFAULT_MODEL_CONFIG;
+
+                const paramDefinitions = {
+                    'max_tokens': { label: '最大生成字数', type: 'select', optionsKey: 'max_tokens_options', defaultKey: 'default_max_tokens' },
+                    'temperature': { label: '温度', type: 'number', step: '0.01', min: '0', max: '2' },
+                    'top_p': { label: 'Top-P', type: 'number', step: '0.01', min: '0', max: '1' },
+                    'frequency_penalty': { label: '频率惩罚', type: 'number', step: '0.01', min: '-2', max: '2' },
+                };
+
+
+                for (const paramKey in paramDefinitions) {
+                    const definition = paramDefinitions[paramKey];
+                    let paramValueInConfig = modelConfig[paramKey];
+                    if (definition.optionsKey && modelConfig[definition.optionsKey]) {
+                         paramValueInConfig = modelConfig[definition.optionsKey];
+                    } else if (definition.defaultKey && modelConfig[definition.defaultKey]) {
+                        paramValueInConfig = modelConfig[definition.defaultKey];
+                    }
+
+                    if (paramValueInConfig === undefined && !definition.optionsKey) {
+                        continue;
+                    }
+
+                    const controlGroup = document.createElement('div');
+                    controlGroup.className = 'control-group';
+
+                    const label = document.createElement('label');
+                    label.textContent = definition.label + ':';
+                    controlGroup.appendChild(label);
+
+                    let inputElement;
+
+                    if (definition.type === 'select') {
+                        inputElement = document.createElement('select');
+                        inputElement.id = paramKey;
+                        const options = modelConfig[definition.optionsKey] || [];
+                        options.forEach(optionVal => {
+                            const option = document.createElement('option');
+                            option.value = String(optionVal);
+                            option.textContent = `${optionVal} 字`;
+                            inputElement.appendChild(option);
+                        });
+                        const defaultValue = savedConfig[paramKey] !== undefined ? String(savedConfig[paramKey]) :
+                                            (modelConfig[definition.defaultKey] !== undefined ? String(modelConfig[definition.defaultKey]) :
+                                            (options.length > 0 ? String(options[0]) : ''));
+                        inputElement.value = defaultValue;
+
+                    } else if (definition.type === 'number') {
+                        inputElement = document.createElement('input');
+                        inputElement.type = 'number';
+                        inputElement.step = definition.step || 'any';
+                        if (definition.min) inputElement.min = definition.min;
+                        if (definition.max) inputElement.max = definition.max;
+                        inputElement.id = paramKey;
+                        const defaultValue = savedConfig[paramKey] !== undefined ? String(savedConfig[paramKey]) :
+                                            (modelConfig[paramKey] !== undefined ? String(modelConfig[paramKey]) : '');
+                        inputElement.value = defaultValue;
+                    }
+
+                    if (inputElement) {
+                        controlGroup.appendChild(inputElement);
+                        dynamicModelControlsDiv.appendChild(controlGroup);
+                    }
+                }
+            }
+
+            // --- 初始化加载 ---
+            loadModels().then(() => {
+                return Promise.all([loadDefaultPrompts(), loadOutputConfig()]);
+            }).then(() => {
+                loadSavedConfig();
+            });
+
+
+            // --- 事件监听器 ---
+
+            modelSelect.addEventListener('change', () => {
+                displayModelControls(modelSelect.value);
+            });
+
+            taskDecompositionBtn.addEventListener('click', () => {
+                setActiveTaskButton('任务拆解');
+            });
+
+            taskQuestionGenerationBtn.addEventListener('click', () => {
+                setActiveTaskButton('任务生题');
+            });
+
+            submitBtn.addEventListener('click', async () => {
+                const selectedModel = modelSelect.value;
+                const userPrompt = userPromptTextarea.value;
+                const systemPrompt = systemPromptTextarea.value;
+                const uploadedFile = fileUploadInput.files[0];
+
+                if (!selectedModel) {
+                    console.warn("未选择特定模型，将使用通用默认配置进行提交。");
+                }
+
+                llmResultDiv.textContent = '正在生成中，请稍候...';
+
+                const dynamicParams = {};
+                dynamicModelControlsDiv.querySelectorAll('input, select').forEach(control => {
+                    if (control.id) {
+                        dynamicParams[control.id] = control.value;
+                    }
+                });
+
+                const formData = new FormData();
+                formData.append('request_data', JSON.stringify({
+                    task_type: currentTask,
+                    model_name: selectedModel || 'default_model',
+                    user_prompt: userPrompt,
+                    system_prompt: systemPrompt,
+                    ...dynamicParams
+                }));
+
+                if (uploadedFile) {
+                    formData.append('uploaded_file', uploadedFile);
+                }
+
+                try {
+                    const response = await fetch('/get_llm_completion', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    llmResultDiv.textContent = data.result || JSON.stringify(data, null, 2);
+
+                } catch (error) {
+                    console.error('调用后端接口失败:', error);
+                    llmResultDiv.textContent = `生成失败: ${error.message}. 请检查后端服务是否运行正常，或尝试重新提交。`;
+                }
+            });
+
+            saveConfigBtn.addEventListener('click', async () => {
+                const currentModel = modelSelect.value || 'default_model';
+                const currentUserPrompt = userPromptTextarea.value;
+                const currentSystemPrompt = systemPromptTextarea.value;
+
+                const configToSave = {
+                    model_name: currentModel,
+                    user_prompt: currentUserPrompt,
+                    system_prompt: currentSystemPrompt,
+                };
+                dynamicModelControlsDiv.querySelectorAll('input, select').forEach(control => {
+                    if (control.id) {
+                        configToSave[control.id] = control.value;
+                    }
+                });
+
+                try {
+                    const response = await fetch('/save_config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(configToSave)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    alert(result.message || '配置保存成功！');
+
+                } catch (error) {
+                    console.error('保存配置失败:', error);
+                    alert(`保存配置失败: ${error.message}`);
+                }
+            });
+
+            fileUploadInput.addEventListener('change', () => {
+                if (fileUploadInput.files.length > 0) {
+                    // console.log('已选择文件:', fileUploadInput.files[0].name);
+                }
+            });
+
+            // --- 新增：复制按钮点击事件 ---
+            copyResultBtn.addEventListener('click', async () => {
+                const textToCopy = llmResultDiv.textContent;
+                try {
+                    // 使用 Clipboard API 复制文本
+                    await navigator.clipboard.writeText(textToCopy);
+                    alert('结果已复制到剪贴板！');
+                } catch (err) {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制。');
+                }
+            });
+            // --- END 新增：复制按钮点击事件 ---
+
+            setActiveTaskButton(currentTask);
+        });
+    </script>
+</body>
+</html>
