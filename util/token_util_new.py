@@ -277,8 +277,9 @@ class token_fresh:
             'use_ext_first': '1',
             'message': 'none'
         }
+        self.log.info(f"llm_res_input params:{params}, model_ext {model_ext}, source {source}")
         llm_res_json = self.call_model(params, model_ext, source=source) if debug_module == "online" else self.call_model_local(params, model_ext, source=source)
-
+        self.log.info(f"llm_res_output_json:{llm_res_json}")
         return llm_res_json
 
     def query_video_task_status(self, task_id, model_type="volcengine:Doubao-Seedance-1.0-pro-250528"):
@@ -388,6 +389,7 @@ class token_fresh:
                 # 根据状态处理
                 if status == "PROCESS_SUCCESS":
                     self.log.info("----- split_task任务成功完成 -----")
+                    self.log.info(f"llm_res_output_split_task_result:{task_result}")
                     # save_path = self.download_video_from_data(task_result)
                     return task_result
                 elif status == "PROCESS_FAILED":

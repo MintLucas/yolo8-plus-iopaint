@@ -164,12 +164,14 @@ class oss_util:
             self.log.info(f"Downloading from {path} to {local_path}...")
             response = requests.get(path, stream=True)
             response.raise_for_status()
-
+            file_size = 0
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            
-            self.log.info("Download successful!")
+                    file_size += len(chunk)
+                    self.log.info(f"已下载: {file_size / (1024 * 1024):.2f} MB")
+            self.log.info(f"最终文件大小: {file_size / (1024 * 1024):.2f} MB")
+            self.log.info(f"Download successful to {local_path}!")
             return (local_path, file_name)
 
         except requests.exceptions.RequestException as e:

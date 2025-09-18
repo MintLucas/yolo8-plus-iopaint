@@ -11,7 +11,7 @@ import json
 from util.mylogging import get_logger
 from smart_video.api_test_oss2 import oss_util
 from util.token_util_new import token_fresh
-import traceback
+import traceback,time,random
 class Smart_video_split:
     def __init__(self, log=get_logger("smart_video_split")):
         self.log = log
@@ -26,22 +26,35 @@ class Smart_video_split:
         使用dashscope进行视频切割
         """
         try:
+            material_id = str(material_id)
             self.log.info(f"start_process_task_id_{material_id}")
             self.task_status[material_id] = 'waiting'
             with self.lock:
                 self.task_status[material_id] = 'downloading'
+                self.log.info(f"downloading_process_task_id_{material_id}")
                 local_path,file_name = self.oss_util.check_video_path(input_path)
                 oss_bucket_object_key = "wces/"+file_name
                 self.task_status[material_id] = 'processing_state1'
+                self.log.info(f"upload_file_process_task_id_{material_id} oss_bucket_object_key: {oss_bucket_object_key}")
                 up_status = self.oss_util.upload_file(local_file_path=local_path, object_key=oss_bucket_object_key)
                 sh_url_path = self.oss_util.get_url(oss_bucket_object_key)
+                self.log.info(f"get_url_process_task_id_{material_id} url:{sh_url_path}")
                 self.task_status[material_id] = 'processing_state2'
+                start_time = time.time()
                 dashcope_res = self.token_fresh.call_model_zp_video_split(videoUrl = sh_url_path, duration=video_duration)
+                self.log.info(f"video_split_process_task_id_{material_id} url:{sh_url_path}")
                 task_id = dashcope_res.get("response_data", {}).get("RequestId", "")
                 self.task_status[material_id] = 'processing_state3'
                 dashcope_status = self.token_fresh.query_video_split_task_status(task_id)
+                self.log.info(f"query_video_split_process_task_id_{material_id} dashcope_status:{dashcope_status}")
                 dashcope_video_split_res = json.loads(dashcope_status.get("response_data", {}).get("Data", {}).get("Result", "{}"))
                 dashcope_video_split_list = dashcope_video_split_res.get("splitVideoPartResults", [])
+                end_time = time.time()
+                elapsed_time_seconds = end_time -start_time
+                elapsed_minutes = int(elapsed_time_seconds // 60)
+                elapsed_seconds = int(elapsed_time_seconds % 60)
+                # 打印运行时间
+                print(f"运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
                 self.task_status[material_id] = f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}'
                 self.oss_util.delete_file(local_path)
                 return dashcope_video_split_list
@@ -95,56 +108,85 @@ class Smart_video_split:
             if not result:
                 self.log.error("模型调用失败，采用兜底策略")
                 self.task_status[material_id] = f'processing_state2'
-                result = self._fallback_split(local_video_path, split_num, video_duration)
+                result = self._fallback_split(local_video_path, split_num, video_duration, part_time)
 
             self.log.info("处理完成，返回结果。")
             self.task_status[material_id] = f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}'
             return result
 
         except Exception as e:
-            self.log.error(f"处理过程中发生错误: {e}")
-            result = self._fallback_split(local_video_path, split_num, video_duration)
+            self.log.error(f"处理过程中发生错误,走finnaly兜底逻辑: {e}")
+            result = self._fallback_split(local_video_path, split_num, video_duration, part_time)
+            self.task_status[material_id] = f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}'
             return result
 
 
-    def _fallback_split(self, video_path, split_num, video_duration):
+    def _fallback_split(self, video_path, split_num, video_duration, part_time):
         """
-        兜底视频切分函数，在多模态模型调用失败时使用。
-        采用经验性、非均匀的方式切分视频。
+        优化的兜底视频切分函数，在多模态模型调用失败时使用。
+        参数：
+        - video_path: 视频路径 (保留参数)
+        - split_num: 期望切分的片段数量
+        - video_duration: 视频总时长
+        - part_time: 期望的单个片段时长，单位秒
         """
-        self.log.info("大模型请求失败，正在执行兜底切分策略...")
-        # duration = _get_video_duration(video_path)
+        self.log.info(f"大模型请求失败，正在执行兜底切分，期望片段时长：{part_time}s...")
+        
         duration = video_duration
-        if not duration:
+        # 确保 part_time 参数有效，设置一个最小有效值
+        min_segment_duration = max(5, part_time / 2)
+
+        if not duration or split_num <= 0 or part_time <= 0:
             return {"splitVideoPartResults": []}
 
         results = []
+        processed_time = 0
 
-        # 设定基于经验的切分比例，可以自行调整
-        # 示例：高光可能出现在 10% 处，40% 处，75% 处
-        split_points = [0.1, 0.4, 0.75]
+        # 循环生成指定数量的片段
+        while len(results) < split_num and processed_time < duration:
+            
+            # 片段时长在 [part_time/2, part_time] 范围内随机浮动
+            # 这确保了时长可控，但又不会过于呆板
+            segment_duration = random.uniform(min_segment_duration, part_time)
 
-        for i, point in enumerate(split_points):
-            # 确保切分数量不超过 split_num
-            if len(results) >= split_num:
-                break
+            # 模拟高光点的位置，在已处理时间之后随机选择一个位置作为起点
+            # 这里的随机步长可以与 part_time 相关，例如 part_time/4 到 part_time
+            # 确保不会过于密集
+            start_time_candidate = processed_time + random.uniform(part_time / 4, part_time)
+            
+            # 确保片段不会超出视频总时长
+            if start_time_candidate + segment_duration > duration:
+                # 如果剩余时长不够，尝试将剩余部分作为一个片段
+                remaining_duration = duration - start_time_candidate
+                if remaining_duration > 5: # 确保片段有意义
+                    end_time = duration
+                    theme = f"自动切分 {len(results) + 1}：视频末尾"
+                    results.append({
+                        "beginTime": round(start_time_candidate, 2),
+                        "endTime": round(end_time, 2),
+                        "theme": theme,
+                        "type": "highlight",
+                        "by": "fallback"
+                    })
+                break # 循环结束
 
-            # 假设每个高光片段持续 15-25 秒
-            start_time = duration * point
-            end_time = min(start_time + 20, duration)  # 假设每个高光时长为20秒，不超过总时长
+            start_time = start_time_candidate
+            end_time = start_time + segment_duration
+            
+            theme = f"自动切分 {len(results) + 1}：视频{int(start_time)}s附近"
+            results.append({
+                "beginTime": round(start_time, 2),
+                "endTime": round(end_time, 2),
+                "theme": theme,
+                "type": "highlight",
+                "by": "fallback"
+            })
+            
+            # 更新已处理时间，避免下一个片段与之重叠
+            # 在片段之间留出随机的“过渡/非高光”时间
+            processed_time = end_time + random.uniform(5, 15)
 
-            # 确保片段有意义，例如时长大于5秒
-            if end_time - start_time > 5:
-                theme = f"自动切分 {i + 1}：视频{int(start_time)}s附近"
-                results.append({
-                    "beginTime": round(start_time, 2),
-                    "endTime": round(end_time, 2),
-                    "theme": theme,
-                    "type": "highlight",
-                    "by": "fallback"
-                })
-
-        self.log.info("兜底切分完成。")
+        self.log.info(f"兜底切分完成，共生成 {len(results)} 个片段。")
         return {"splitVideoPartResults": results}
 
 

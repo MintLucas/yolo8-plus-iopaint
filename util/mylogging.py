@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2025/09/18 11:18
+# @Author  : zhipeng16
+# @Email   : zzzp50@ustc.edu
+# @File    : mylogging.py
+# @Usage   : Describe the file's purpose
 import logging
 from logging.handlers import TimedRotatingFileHandler, RotatingFileHandler
 import os
@@ -77,29 +84,54 @@ class SafeRotatingFileHandler(TimedRotatingFileHandler):
 
 
 def get_logger(file_name):
-    #day_now = datetime.datetime.now()
-    #day_now = day_now.strftime('%Y%m%d')
+    # 配置日志格式
     log_fmt = '%(asctime)s\tFile \"%(filename)s\",line %(lineno)s\t%(levelname)s: %(message)s'
     formatter = logging.Formatter(log_fmt)
+
+    # 确定日志保存路径
     log_path = './log'
-    if 'RESULT_DIR' in  os.environ:#这个可以不要
-        
-        log_path = '%s/log'%os.environ['RESULT_DIR']
+    if 'RESULT_DIR' in os.environ:
+        log_path = '%s/log' % os.environ['RESULT_DIR']
+
+    # 如果日志目录不存在，则创建
     if not os.path.exists(log_path):
-        os.mkdir(log_path)
-    log_file_handler = RotatingFileHandler(filename="./log/%s.log"%(file_name),mode='a',maxBytes=1024*1024*500,backupCount=6)
+        os.makedirs(log_path)
+
+        # 1. 创建普通日志处理器，用于记录 INFO 和 WARNING，不记录 ERROR
+    log_file_path = os.path.join(log_path, f"{file_name}.log")
+    log_file_handler = RotatingFileHandler(
+        filename=log_file_path,
+        mode='a',
+        maxBytes=1024 * 1024 * 500,
+        backupCount=6
+    )
     log_file_handler.setFormatter(formatter)
-    log_file_handler.propagate = False
-    logging.basicConfig(level=logging.INFO)
+    # 核心改动：添加一个 lambda 过滤器来排除 ERROR 级别的日志
+    log_file_handler.addFilter(lambda record: record.levelno < logging.ERROR)
+
+    # 2. 创建错误日志处理器，用于单独记录 ERROR 级别及以上的信息
+    error_file_path = os.path.join(log_path, f"{file_name}.err")
+    error_file_handler = RotatingFileHandler(
+        filename=error_file_path,
+        mode='a',
+        maxBytes=1024 * 1024 * 500,
+        backupCount=6
+    )
+    error_file_handler.setFormatter(formatter)
+    error_file_handler.setLevel(logging.ERROR)
+
+    # 获取或创建日志器实例
     log = logging.getLogger(file_name)
+    log.setLevel(logging.INFO)
+
+    # 防止重复添加处理器
     if not log.handlers:
         log.addHandler(log_file_handler)
-    #log.addHandler(log_file_handler)
-    #print(log.handlers)
+        log.addHandler(error_file_handler)
+
     log.propagate = False
 
     return log
-
 
 def get_es_logger(file_name):
     day_now = datetime.datetime.now()
