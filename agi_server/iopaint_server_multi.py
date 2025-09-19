@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time    : 2025/09/18 17:05
 # @Author  : zhipeng16
@@ -25,7 +24,7 @@ BASE_PORT = 8500
 MODEL = "lama"
 HOST = "0.0.0.0"
 
-
+PYTHON_EXECUTABLE = sys.executable
 def log_pipe(pipe, port):
     """从子进程的管道中读取输出并记录日志"""
     try:
@@ -49,7 +48,7 @@ def start_iopaint_instance(port: int, device_index: int):
     # 构建命令
     # --device 和 --interactive-seg-device 现在固定为 'cuda'
     command = [
-        "python", "-m", "iopaint", "start",
+        PYTHON_EXECUTABLE, "-m", "iopaint", "start",
         f"--model={MODEL}",
         "--device=cuda",
         f"--host={HOST}",

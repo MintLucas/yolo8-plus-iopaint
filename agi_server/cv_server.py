@@ -128,6 +128,6 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=1)
+    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=3)
 
 
