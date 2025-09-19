@@ -70,7 +70,10 @@ def iou(box1, box2):
     return inter_area / union_area
 
 def detect_watermark_in_frames(frames, model_path, conf=0.2, device='0'):
-    model = YOLO(model_path)
+    if isinstance(model_path, str):
+        model = YOLO(model_path)
+    else:
+        model = model_path
     detection_results = []
 
     for frame in frames:
@@ -89,7 +92,7 @@ def detect_watermark_in_frames(frames, model_path, conf=0.2, device='0'):
                 detection_results.append(boxes)  # 将检测框位置添加到结果列表
             else:
                 detection_results.append([])  # 没有检测框，添加空列表
-    print(f"detection_results长度:{len(detection_results)}")
+    # print(f"detection_results长度:{len(detection_results)}")
 
     return detection_results
 
@@ -170,29 +173,29 @@ def vote_for_best_box(detection_results, iou_threshold=0.3):
                 other_box['cluster_id'] = cluster_id
                 clusters[cluster_id].append(other_box)
     
-    print(f"形成了 {len(clusters)} 个聚类")
+    # print(f"形成了 {len(clusters)} 个聚类")
     
     # 选择最大的聚类
     if clusters:
         # 按聚类大小排序
         clusters.sort(key=len, reverse=True)
         
-        print("\n聚类大小排名（前5名）:")
-        for i, cluster in enumerate(clusters[:5]):
-            print(f"聚类{i}: {len(cluster)} 个框")
+        # print("\n聚类大小排名（前5名）:")
+        # for i, cluster in enumerate(clusters[:5]):
+            # print(f"聚类{i}: {len(cluster)} 个框")
         
         # 选择最大的聚类
         largest_cluster = clusters[0]
-        print(f"\n最大聚类包含 {len(largest_cluster)} 个框")
+        # print(f"\n最大聚类包含 {len(largest_cluster)} 个框")
         
         # 计算聚类中心（平均框）
         cluster_boxes = [box_info['xywh'] for box_info in largest_cluster]
         avg_box = np.mean(cluster_boxes, axis=0)
         
-        print(f"聚类中心框: {avg_box}")
+        # print(f"聚类中心框: {avg_box}")
         return avg_box
     else:
-        print("没有形成任何聚类")
+        # print("没有形成任何聚类")
         return None
 
 

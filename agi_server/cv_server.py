@@ -60,11 +60,27 @@ def log_request(func):
 
 
 
-@app.get('/deal_local_video')
-async def get_images_url_from_baidu(request: Request):
-    par = request.query_params.items()
+@app.post('/deal_local_video')
+async def deal_local_video(request: Request):
+    try:
+        data = await request.json()
+        url = data['uploaded_video_url']
+        material_id = data['material_id']
+    except Exception as e:
+        trace_info = traceback.format_exc()
+        ExS.log.error(
+            f"请求处理失败: {e}",
+            extra={'request_body': request.body(), 'trace_info': trace_info}
+        )
+        return {'code':-2,'err_msg':'bad request:'+str(e)}
     end = {'code':0}
-
+    from threading import Thread
+    def sub(data):
+        ExS.smart_video_detect.gen_video_detect(data)
+    t = Thread(target=sub, args=(data,))
+    t.start()
+    end['url'] =url
+    end['dataid'] = material_id
     return end
 
 @app.post("/split_video")
@@ -83,11 +99,23 @@ async def split_video(request: Request,response: Response):
     end = {'code':0}
     from threading import Thread
     def sub(data):
-        ExS.smart_video.gen_video_split(data)
-    t = Thread(target=sub, args=(data))
+        ExS.smart_video_split.gen_video_split(data)
+    t = Thread(target=sub, args=(data,))
     t.start()
     end['url'] =url
     end['dataid'] = material_id
+    return end
+
+@app.get("/look_up_complex")
+async def look_up_task(request: Request):
+    dataid = request.query_params.get('dataid')
+    task_type = request.query_params.get('type', "split")
+    ExS.log.info(f'look up:{dataid}')
+    if task_type == "split":
+        ExS.smart_video_split.task_status.get(dataid, None)
+    else:
+        status = ExS.smart_video_detect.task_status.get(dataid,None)
+    end = {'code':0,'status':status}
     return end
 
 from util import mylogging
@@ -100,6 +128,6 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='external_server:app', host='0.0.0.0', port=2222, workers=1)
+    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=1)
 
 

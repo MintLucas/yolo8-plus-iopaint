@@ -16,12 +16,14 @@ import uuid
 import random
 from queue import Queue
 from smart_video.smart_video_split import Smart_video_split
+from smart_video.smart_video_detect import Smart_video_detect
+
 class CVServer:
     def __init__(self, log = mylogging.get_logger("CVServer")):
         self.log = log
         self.session = requests.session()
-        self.smart_video = Smart_video_split(self.log)
-
+        self.smart_video_split = Smart_video_split(self.log)
+        self.smart_video_detect = Smart_video_detect(self.log)
     
     
     def getErrorTrace(self):
