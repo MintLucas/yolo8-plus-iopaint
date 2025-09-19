@@ -112,7 +112,7 @@ async def look_up_task(request: Request):
     task_type = request.query_params.get('type', "split")
     ExS.log.info(f'look up:{dataid}')
     if task_type == "split":
-        ExS.smart_video_split.task_status.get(dataid, None)
+        status = ExS.smart_video_split.task_status.get(dataid, None)
     else:
         status = ExS.smart_video_detect.task_status.get(dataid,None)
     end = {'code':0,'status':status}
