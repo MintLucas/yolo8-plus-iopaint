@@ -46,7 +46,7 @@ class Smart_video_detect(Base_video_class):
         from threading import Lock
         self.lock = Lock()
         from queue import Queue
-        self.queue = Queue(3000)
+        self.queue = Queue(600)
         self.sft_yolo = YOLO(model_path)
         self.sft_yolo.to("cuda")
         self.base_machine_ip = "http://10.78.9.45:"
@@ -78,7 +78,7 @@ class Smart_video_detect(Base_video_class):
                 self.log.info(f"yolo_masked_process_task_id_{material_id} yolo_masked {yolo_masked}")
                 
                 start_time = time.time()
-                dst_path = "tmp_data/tmp_detect_res/" + file_name
+                dst_path = "tmp_data/tmp_detect_res/" + file_name + ".mp4"
                 dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
                 
                 self.redis_client.hset(self.redis_key, material_id, 'processing_state3')

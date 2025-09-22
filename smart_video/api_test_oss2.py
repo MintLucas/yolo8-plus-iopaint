@@ -169,7 +169,7 @@ class oss_util:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
                     file_size += len(chunk)
-                    self.log.info(f"已下载: {file_size / (1024 * 1024):.2f} MB")
+                    # self.log.info(f"已下载: {file_size / (1024 * 1024):.2f} MB")
             self.log.info(f"最终文件大小: {file_size / (1024 * 1024):.2f} MB")
             self.log.info(f"Download successful to {local_path}!")
             return (local_path, file_name)
@@ -204,11 +204,12 @@ class oss_util:
 # 当此脚本被直接运行时，调用main函数
 if __name__ == "__main__":
     # trans_url_shanghai('https://aiclip.weibo.com/redirect?key=cph%2Fyt_dlp%2F9%2F87979%2F2025-09-11%2Fv_37e5855bc3edf666fa7161bd019ebf9a.mp4')
-    local_file_path = "/data2/zhipeng16/datasets/src_videos/source1_top_right.mp4"
+    #本地上传
     o_u = oss_util()
-    file_path = o_u.check_video_path("https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/6/51746/2025-09-12/v_187a150723a101760c2d4584172fbe1d.mp4?x-oss-date=20250912T111818Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20250912%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=d177c858922a59d4b05d809130ff5813adba31bcfb515024fa9642bcfb703c57")
-    
-    
-    file_name = o_u.upload_file()
-    res_url = o_u.get_url(file_name)  # 脚本入口，当文件被直接运行时调用main函数
+    local_file_path = "/workspace/work/zhipeng16/datasets/videos/masked_result_v2.mp4"
+    if "/" not in local_file_path:
+        local_file_path = o_u.check_video_path(local_file_path)
+    #从网络上传
+    bucked_object_name = o_u.upload_file(local_file_path, object_key="wces/masked_result_v2.mp4")
+    res_url = o_u.get_url(bucked_object_name)  # 脚本入口，当文件被直接运行时调用main函数
     print(res_url)

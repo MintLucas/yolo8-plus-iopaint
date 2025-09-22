@@ -47,7 +47,7 @@ class Smart_video_split(Base_video_class):
                 self.log.info(f"video_split_process_task_id_{material_id} url:{sh_url_path}")
                 task_id = dashcope_res.get("response_data", {}).get("RequestId", "")
                 self.redis_client.hset(self.redis_key, material_id, 'processing_state3')
-                dashcope_status = self.token_fresh.query_video_split_redis_client.hset(task_id)
+                dashcope_status = self.token_fresh.query_video_split_task_status(task_id)
                 self.log.info(f"query_video_split_process_task_id_{material_id} dashcope_status:{dashcope_status}")
                 dashcope_video_split_res = json.loads(dashcope_status.get("response_data", {}).get("Data", {}).get("Result", "{}"))
                 dashcope_video_split_list = dashcope_video_split_res.get("splitVideoPartResults", [])
