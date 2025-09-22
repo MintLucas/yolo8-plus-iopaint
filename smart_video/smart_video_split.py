@@ -11,13 +11,15 @@ import json
 from util.mylogging import get_logger
 from smart_video.api_test_oss2 import oss_util
 from util.token_util_new import token_fresh
-import traceback,time,random
-class Smart_video_split:
+import traceback,time,random,redis
+from smart_video.base_video_class import Base_video_class
+class Smart_video_split(Base_video_class):
     def __init__(self, log=get_logger("smart_video_split")):
         self.log = log
+        super().__init__(self.log)
+        self.redis_key = self.__class__.__name__
         self.oss_util = oss_util(self.log)
         self.token_fresh = token_fresh()
-        self.task_status = {}
         from threading import Lock
         self.lock = Lock()
 
@@ -28,24 +30,24 @@ class Smart_video_split:
         try:
             material_id = str(material_id)
             self.log.info(f"start_process_task_id_{material_id}")
-            self.task_status[material_id] = 'waiting'
+            self.redis_client.hset(self.redis_key, material_id, 'waiting')
             with self.lock:
-                self.task_status[material_id] = 'downloading'
+                self.redis_client.hset(self.redis_key, material_id, 'downloading')
                 self.log.info(f"downloading_process_task_id_{material_id}")
                 local_path,file_name = self.oss_util.check_video_path(input_path)
                 oss_bucket_object_key = "wces/"+file_name
-                self.task_status[material_id] = 'processing_state1'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state1')
                 self.log.info(f"upload_file_process_task_id_{material_id} oss_bucket_object_key: {oss_bucket_object_key}")
                 up_status = self.oss_util.upload_file(local_file_path=local_path, object_key=oss_bucket_object_key)
                 sh_url_path = self.oss_util.get_url(oss_bucket_object_key)
                 self.log.info(f"get_url_process_task_id_{material_id} url:{sh_url_path}")
-                self.task_status[material_id] = 'processing_state2'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state2')
                 start_time = time.time()
                 dashcope_res = self.token_fresh.call_model_zp_video_split(videoUrl = sh_url_path, duration=video_duration)
                 self.log.info(f"video_split_process_task_id_{material_id} url:{sh_url_path}")
                 task_id = dashcope_res.get("response_data", {}).get("RequestId", "")
-                self.task_status[material_id] = 'processing_state3'
-                dashcope_status = self.token_fresh.query_video_split_task_status(task_id)
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state3')
+                dashcope_status = self.token_fresh.query_video_split_redis_client.hset(task_id)
                 self.log.info(f"query_video_split_process_task_id_{material_id} dashcope_status:{dashcope_status}")
                 dashcope_video_split_res = json.loads(dashcope_status.get("response_data", {}).get("Data", {}).get("Result", "{}"))
                 dashcope_video_split_list = dashcope_video_split_res.get("splitVideoPartResults", [])
@@ -55,12 +57,12 @@ class Smart_video_split:
                 elapsed_seconds = int(elapsed_time_seconds % 60)
                 # 打印运行时间
                 print(f"运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
-                self.task_status[material_id] = f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}'
+                self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}')
                 self.oss_util.delete_file(local_path)
                 return dashcope_video_split_list
         except Exception as e:
             error_info = traceback.format_exc()
-            self.task_status[material_id] = f'error:{e}'
+            self.redis_client.hset(self.redis_key, material_id, f'error:{e}')
             self.log.error(f"视频切割异常: {e}\n{error_info}")
             return 0
 
@@ -99,7 +101,7 @@ class Smart_video_split:
                 "split_num": split_num,
                 "part_time": part_time,
             }
-            self.task_status[material_id] = f'processing_state1'
+            self.redis_client.hset(self.redis_key, material_id, f'processing_state1')
             result = self.token_fresh.call_model_zp(system_prompt=prompt_content, user_prompt=json.dumps(user_prompt),
                                                         user_prompt_media=use_medias,
                                                         model_type='volcengine:Doubao-Seed-1.6-flash')
@@ -107,17 +109,17 @@ class Smart_video_split:
 
             if not result:
                 self.log.error("模型调用失败，采用兜底策略")
-                self.task_status[material_id] = f'processing_state2'
+                self.redis_client.hset(self.redis_key, material_id, f'processing_state2')
                 result = self._fallback_split(local_video_path, split_num, video_duration, part_time)
 
             self.log.info("处理完成，返回结果。")
-            self.task_status[material_id] = f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}'
+            self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}')
             return result
 
         except Exception as e:
             self.log.error(f"处理过程中发生错误,走finnaly兜底逻辑: {e}")
             result = self._fallback_split(local_video_path, split_num, video_duration, part_time)
-            self.task_status[material_id] = f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}'
+            self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}')
             return result
 
 

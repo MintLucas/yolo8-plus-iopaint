@@ -24,6 +24,7 @@ from voting_video2 import process_video_for_watermark
 from ultralytics import YOLO
 from moviepy.editor import *
 from agi_server.iopaint_server_multi import DEVICES_INDICES,BASE_PORT
+from smart_video.base_video_class import Base_video_class
 # --- 全局配置 ---
 # 文件所在的上层目录为项目目录os.path.dirname
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))).replace(os.sep, '/')
@@ -34,9 +35,11 @@ cache_dir = f"{project_dir}/.cache"
 # 模型目录
 model_path = f"{project_dir}/models/last.pt"
 
-class Smart_video_detect:
+class Smart_video_detect(Base_video_class):
     def __init__(self, log=get_logger("smart_video_detect")):
         self.log = log
+        super().__init__(self.log)
+        self.redis_key = self.__class__.__name__
         self.oss_util = oss_util(self.log)
         self.token_fresh = token_fresh()
         self.task_status = {}
@@ -55,7 +58,7 @@ class Smart_video_detect:
             3:self.base_machine_ip+"8503"
         }
         self.lama_inpaints = {k:self.base_machine_ip+str(BASE_PORT+k) for k in range(len(DEVICES_INDICES))}
-        self.log.info(f"一共起了{len(DEVICES_INDICES)}个服务, 卡分布{DEVICES_INDICES}, 服务ip: {self.base_machine_ip+BASE_PORT}")
+        self.log.info(f"一共起了{len(DEVICES_INDICES)}个服务, 卡分布{DEVICES_INDICES}, 服务ip: {self.base_machine_ip+str(BASE_PORT)}")
     def dashscope_video_detect(self, input_path = "",  material_id = "zhipeng16_test"):
         """
         使用dashscope进行视频检测和修复
@@ -63,14 +66,14 @@ class Smart_video_detect:
         try:
             material_id = str(material_id)
             self.log.info(f"start_process_task_id_{material_id}")
-            self.task_status[material_id] = 'waiting'
+            self.redis_client.hset(self.redis_key, material_id, 'waiting')
             with self.lock:
-                self.task_status[material_id] = 'downloading'
+                self.redis_client.hset(self.redis_key, material_id, 'downloading')
                 self.log.info(f"downloading_process_task_id_{material_id}")
                 local_path,file_name = self.oss_util.check_video_path(input_path)
-                self.task_status[material_id] = 'processing_state1'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state1')
                 
-                self.task_status[material_id] = 'processing_state2'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state2')
                 yolo_masked = self.get_yolo_masked(local_path)
                 self.log.info(f"yolo_masked_process_task_id_{material_id} yolo_masked {yolo_masked}")
                 
@@ -78,7 +81,7 @@ class Smart_video_detect:
                 dst_path = "tmp_data/tmp_detect_res/" + file_name
                 dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
                 
-                self.task_status[material_id] = 'processing_state3'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state3')
                 end_time = time.time()
                                 
                 elapsed_time_seconds = end_time -start_time
@@ -88,38 +91,88 @@ class Smart_video_detect:
                 self.log.info(f"运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
                 
                 
-                self.task_status[material_id] = 'processing_state1'
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state1')
                 oss_bucket_object_key = "wces_detect/"+file_name
                 self.log.info(f"upload_file_process_task_id_{material_id} oss_bucket_object_key: {oss_bucket_object_key}")
                 up_status = self.oss_util.upload_file(local_file_path=dst_path, object_key=oss_bucket_object_key)
                 sh_url_path = self.oss_util.get_url(oss_bucket_object_key)
                 self.log.info(f"video_split_process_task_id_{material_id} detect_url:{sh_url_path}")
-                self.task_status[material_id] = f'finish_all:{sh_url_path}'
+                self.redis_client.hset(self.redis_key, material_id, f'finish_all:{sh_url_path}')
                 self.oss_util.delete_file(local_path)
                 self.oss_util.delete_file(dst_path)
                 return sh_url_path
         except Exception as e:
             error_info = traceback.format_exc()
-            self.task_status[material_id] = f'error:{e}'
+            self.redis_client.hset(self.redis_key, material_id, f'error:{e}')
             self.log.error(f"视频修复异常: {e}\n{error_info}")
             return 0
 
-    def base_video_detect(self, video_input: str, split_num: int = 2, part_time: int = 45, mode: str = 'auto', video_duration:int = 167, material_id = "zhipeng_test"):
+    def base_video_detect(self, video_url: str,  material_id = "zhipeng_test"):
         """
-        智能视频切分函数。
+        发起视频处理任务。
 
         Args:
-            video_input (str): 视频路径，可以是本地路径或URL。
-            split_num (int, optional): 期望的拆分段数。
-            part_time (int, optional): 每段视频的期望时长（秒）。
-            mode (str, optional): 处理模式。
+            video_url (str): 待处理视频的URL。
+            material_id (str): 视频的唯一标识ID。
 
         Returns:
-            dict: 包含视频切分结果的字典，如果处理失败则返回None。
+            dict: 接口返回的JSON数据，如果请求失败则返回None。
         """
-        #TODO
-        pass
+        url = 'http://ip1.push.weibo.cn:18196/deal_local_video'
+        payload = {
+            'uploaded_video_url': video_url,
+            'material_id': material_id
+        }
 
+        try:
+            self.log.info(f"jt16正在发起视频处理任务，material_id: {material_id}")
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()  # 如果状态码不是200，则抛出HTTPError
+            result = response.json()
+            self.log.info(f"jt16任务发起成功，返回结果: {result}")
+            return result
+        except requests.exceptions.RequestException as e:
+            self.log.error(f"jt16发起任务失败，material_id: {material_id}, 错误: {e}")
+            return None
+        except json.JSONDecodeError:
+            self.log.error(f"jt16解析JSON失败，响应内容: {response.text}")
+            return None
+
+        # 2. 查询任务状态函数
+    def check_task_status(self, material_id: str):
+        """
+        查询视频处理任务的状态，并将状态存入Redis。
+
+        Args:
+            material_id (str): 视频的唯一标识ID。
+
+        Returns:
+            str: 任务的当前状态，如果查询失败则返回None。
+        """
+        url = 'http://ip1.push.weibo.cn:18196/look_up_complex'
+        params = {'dataid': material_id}
+        try:
+            self.log.info(f"正在查询jt16任务状态，material_id: {material_id}")
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            status = data.get('status')
+            if not status:
+                self.log.warning(f"查询结果中jt16未找到'status'字段，返回数据: {data}")
+                return None
+                
+            self.log.info(f"任务状态查询jt16成功，material_id: {material_id}, 状态: {status}")
+            # 将状态存入Redis
+            self.redis_client.hset(self.redis_key, material_id,  status)
+        except requests.exceptions.RequestException as e:
+            self.log.error(f"jt16查询任务状态失败，material_id: {material_id}, 错误: {e}")
+            return None
+        except json.JSONDecodeError:
+            self.log.error(f"jt16解析JSON失败，响应内容: {response.text}")
+            return None
+        except Exception as e:
+            self.log.error(f"jt16查询任务状态时发生未知错误: {e}")
+            return None
 
     def _fallback_split(self, video_path, split_num, video_duration, part_time):
         """
@@ -226,7 +279,7 @@ class Smart_video_detect:
                 self.log.info(f'put:{index} sm:{freame_num} qusize:{self.queue.qsize()}')
                 per = round(index*100/freame_num,3)
                 per = f'{per}%'
-                self.task_status[material_id] = f'masking:{per}'
+                self.redis_client.hset(self.redis_key, material_id, f'masking:{per}')
             #print(type(one))
         self.log.info(f'put:{index} nowid:{material_id} sm:{freame_num} qusize:{self.queue.qsize()}')
         for t in ts:
@@ -236,7 +289,7 @@ class Smart_video_detect:
         clip = ImageSequenceClip(self.detect_results, fps=s1.fps)
         clip.set_audio(s1.audio)
         clip.write_videofile(dst_path)
-        self.task_status[material_id] = 'mask finsih'
+        self.redis_client.hset(self.redis_key, material_id, 'mask finsih')
         return dst_path
 
     def create_mask_yolo_center(self, image, bboxes, padding=1):
@@ -338,7 +391,7 @@ class Smart_video_detect:
         if mode == 1:
             res = self.dashscope_video_detect(video_input,  material_id=task_id)
         else:
-            res = self.base_video_detect(video_input, split_num, part_time, mode, video_duration, task_id)
+            res = self.base_video_detect(video_input,  material_id=task_id)
         return res
 
 
