@@ -22,6 +22,30 @@ debug_module = "onlin"
 question_source = "116913455"
 push_source = "356732087"
 role_source = "704786492"
+huoshan_models_list =  [
+    "Doubao-Seed-1.6-thinking-250615",
+    "Doubao-Seed-1.6-thinking",
+    "Doubao-Seed-1.6-250615",
+    "Doubao-Seed-1.6-flash-250615",
+    "Doubao-Seed-1.6-flash",
+    "Doubao-Seed-1.6",
+    "DeepSeek-R1-250528",
+    "Doubao-1.5-vision-pro-250328",
+    "Doubao-1.5-vision-lite-250315",
+    "Doubao-1.5-thinking-pro-250415",
+    "Doubao-1.5-thinking-pro",
+    "Doubao-1.5-thinking-pro-vision",
+    "Doubao-1.5-vision-pro",
+    "Doubao-1.5-vision-lite",
+    "Doubao-1.5-pro-32k",
+    "Doubao-1.5-pro-256k",
+    "Doubao-1.5-lite-32k",
+    "Doubao-1.5-vision-pro-32k",
+    "deepseek-r1",
+    "deepseek-v3",
+    "Doubao-1.5-thinking-vision-pro-250428",
+    "DeepSeek-V3-250324"
+]
 models_dict = {"video-huoshan": "volcengine:Doubao-Seedance-1.0-pro-250528",
                "video-split": "dashscope:SplitVideoParts"}
 video_prompt_test = "生成一段 10 秒健身教学视频，分镜节奏如下：0-3 秒用文字标题 + 运动场景快速引入，呈现‘夏天练出薄肌身材’的主题；3-7 秒展示居家训练场景（如空地），搭配画外音说明‘无需去健身房，在家即可训练’；7-10 秒特写演示欢聚俯卧撑动作，突出胸部发力细节，字幕标注‘每天 50-100 个，练胸关键动作’。整体画面简洁，节奏紧凑，以实用训练指导为主，结尾可快速闪过‘坚持即见效’的提示文字 --ratio 16:9 --duration 10"
