@@ -13,6 +13,8 @@ from smart_video.api_test_oss2 import oss_util
 from util.token_util_new import token_fresh
 import traceback,time,random,redis
 from smart_video.base_video_class import Base_video_class
+from smart_video.test_video_segments import filter_and_combine_video_segments
+
 class Smart_video_split(Base_video_class):
     def __init__(self, log=get_logger("smart_video_split")):
         self.log = log
@@ -23,7 +25,7 @@ class Smart_video_split(Base_video_class):
         from threading import Lock
         self.lock = Lock()
 
-    def dashscope_video_split(self, input_path = "", video_duration = 167, material_id = "zhipeng16_test"):
+    def dashscope_video_split(self, input_path = "", split_num=5, part_time = 45, video_duration = 167, material_id = "zhipeng16_test"):
         """
         使用dashscope进行视频切割
         """
@@ -56,7 +58,8 @@ class Smart_video_split(Base_video_class):
                 elapsed_minutes = int(elapsed_time_seconds // 60)
                 elapsed_seconds = int(elapsed_time_seconds % 60)
                 # 打印运行时间
-                print(f"运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
+                self.log.info(f"dash_split运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
+                dashcope_video_split_list = filter_and_combine_video_segments(dashcope_video_split_list, part_num, part_time)
                 self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}')
                 self.oss_util.delete_file(local_path)
                 return dashcope_video_split_list
@@ -201,7 +204,7 @@ class Smart_video_split(Base_video_class):
         video_duration = source_input.get("video_duration", 167)
         task_id = source_input.get("material_id", "zhipeng_test")
         if mode == 1:
-            res = self.dashscope_video_split(video_input, video_duration, material_id=task_id)
+            res = self.dashscope_video_split(video_input, split_num, part_time, video_duration, material_id=task_id)
         else:
             res = self.base_video_split(video_input, split_num, part_time, mode, video_duration, task_id)
         return res
