@@ -59,7 +59,7 @@ class Smart_video_split(Base_video_class):
                 elapsed_seconds = int(elapsed_time_seconds % 60)
                 # 打印运行时间
                 self.log.info(f"dash_split运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
-                dashcope_video_split_list = filter_and_combine_video_segments(dashcope_video_split_list, part_num, part_time)
+                dashcope_video_split_list = filter_and_combine_video_segments(dashcope_video_split_list, split_num, part_time)
                 self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}')
                 self.oss_util.delete_file(local_path)
                 return dashcope_video_split_list
