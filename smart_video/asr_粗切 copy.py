@@ -86,11 +86,15 @@ cur_dir='/data2/zhipeng16/git/yolo8-watermark-brand/models/'
 # 模型 ID，用于自动下载，它们是 FunASR 官方定义的
 asr_model_id = "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
 vad_model_id = "fsmn-vad"
-punc_model_id = "ct-punc"
+punc_model_id = "funasr/ct-punc"
 
 asr_model = AutoModel(
     model=cur_dir+asr_model_id,
-    device="cuda:0"
+    vad_model=cur_dir+asr_model_id, # VAD用来切静音
+    punc_model=cur_dir+punc_model_id, # 加标点
+    device="cuda:0",
+    disable_update=False
+    
 )
 # asr_model = AutoModel(
 #     model="speech_paraformer-large-vad-punc-spk_asr_nat-zh-cn",   # 逐字转录
