@@ -85,6 +85,7 @@ from funasr import AutoModel
 cur_dir='/workspace/work/zhipeng16/yolo8-plus-iopaint/models/'
 # 模型 ID，用于自动下载，它们是 FunASR 官方定义的
 asr_model_id = "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+<<<<<<< HEAD
 vad_model_id = "speech_fsmn_vad_zh-cn-16k-common-pytorch"
 punc_model_id = "ct-punc"
 
@@ -95,6 +96,17 @@ asr_model = AutoModel(
     device="cuda:2",
     disable_update=True,
     en_post_proc = True
+=======
+vad_model_id = "fsmn-vad"
+punc_model_id = "funasr/ct-punc"
+
+asr_model = AutoModel(
+    model=cur_dir+asr_model_id,
+    vad_model=cur_dir+asr_model_id, # VAD用来切静音
+    punc_model=cur_dir+punc_model_id, # 加标点
+    device="cuda:0",
+    disable_update=False
+>>>>>>> 4a854620bacc523ff0350d28c0386c2acc8886f4
     
 )
 

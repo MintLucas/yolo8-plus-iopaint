@@ -2,10 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
+<<<<<<< HEAD
 frames/
 test/
 log/
 models/
+=======
+frames/*
+>>>>>>> 4a854620bacc523ff0350d28c0386c2acc8886f4
 # C extensions
 *.so
 
