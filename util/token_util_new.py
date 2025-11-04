@@ -12,6 +12,8 @@ import json
 import sys
 import time
 import traceback
+import sys,os
+sys.path.append(os.getcwd())
 from util import mylogging
 import requests
 from urllib.parse import urlparse
@@ -211,6 +213,49 @@ class token_fresh:
             self.log.error(f"call_model_zpl_error: input:{llm_res_json}, " + traceback.format_exc())
             print(traceback.format_exc())
         return llm_res
+
+    def call_model_zp_img(self,user_prompt = "一只可爱的猫猫拿起桌上的一只毛球", system_prompt = "" , model_type = "volcengine:Doubao-Seedance-1.0-pro-250528", source = "356732087"
+                            ,imgs = [], response_format = 'b64_json'):
+        if not user_prompt and not system_prompt:
+            return ""
+        #线上使用
+        model_ext = {
+            "model_ext": {
+                #'disable_analysis': True,
+                "temperature": 0.8,
+                "req_key": "high_aes_general_v30l_zt2i",
+                'prompt': user_prompt,
+                'width': 1131,
+                'height': 852,
+                "response_format": response_format,
+                "watermark": True,
+                "sequential_image_generation": "disabled",
+                "size": "1k"
+                }
+        }
+        # if imgs:
+        #     model_ext["model_ext"]["content"].extend(imgs)
+        utype, model_id = model_type.split(":")
+        params = {
+            'model_id': model_id,
+            'appkey': source,
+            'type': utype,
+            'use_ext_first': '1',
+            'message': 'no_use'
+        }
+
+        llm_res_json = self.call_model(params, model_ext, source=source) if debug_module == "online" else self.call_model_local(params, model_ext, source=source) 
+        try:
+            res_data = llm_res_json['response_data']['data']
+        except Exception as e:
+            self.log.error(f"error_in_zp_img: {llm_res_json}")
+            self.log.error(traceback.format_exc())
+            return ""
+        if response_format == "url":
+            img_data = res_data.get("url", "")
+        else:
+            img_data = res_data[0].get("b64_json", "") if "Seedream" in model_type  else res_data.get("binary_data_base64", [""])[0]
+        return img_data        
 
 
     def re_call_all_models(self, user_prompt, system_prompt,es_doc):
@@ -503,6 +548,12 @@ def test_video(tf, prompt = "落霞与孤鹜齐飞，秋水共长天一色",  mo
 
 if __name__ == '__main__':
     tf = token_fresh()
+    user_prompt = """
+    生成一张可爱的小猫咪图片
+    """
+    test = tf.call_model_zp_img(user_prompt, "", model_type="volcengine:volc-txt2img-21", source="116913455")
+    test = tf.call_model_zp_img(user_prompt, "", "volcengine:Doubao-Seedream-4.0-250828", source="116913455")
+    
     tf.video_smart_split()
 
 
