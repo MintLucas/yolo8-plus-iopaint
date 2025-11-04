@@ -13,7 +13,6 @@ Date: 2025/09/11 18:25:05
 import os, re
 from funasr import AutoModel
 import subprocess
-import requests
 def asr_ms_to_hmsms(ms):
     """将ms转化成hh:mm:ss.ms"""
     return f"{ms//3600000:02d}:{ms%3600000//60000:02d}:{ms%60000//1000:02d}.{ms%1000:03d}"
@@ -77,29 +76,18 @@ def asr_collect_split_para(asr_text, asr_raw_text, asr_punc_array, asr_timestamp
                 para_list.append(tmp_dic)
                 para = ""
     return para_list
-    
-# 将模型下载路径设置为你想要的路径
-# os.environ['MODELSCOPE_CACHE'] = '/data2/zhipeng16/git/yolo8-plus-iopaint/models/asr_models/'
-from funasr import AutoModel
+
 # 初始化模型
-cur_dir='/data2/zhipeng16/git/yolo8-watermark-brand/models/'
+cur_dir='/mnt/cephfs-temp/yining8/'
+cur_dir='/workspace/work/zhipeng16/yolo8-plus-iopaint/models/'
 # 模型 ID，用于自动下载，它们是 FunASR 官方定义的
 asr_model_id = "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
-vad_model_id = "fsmn-vad"
-punc_model_id = "ct-punc"
-
 asr_model = AutoModel(
-    model=cur_dir+asr_model_id,
-    vad_model=cur_dir+vad_model_id,
-    punc_model=cur_dir+punc_model_id,
+    model=cur_dir+asr_model_id,   # 逐字转录
+    vad_model=cur_dir+"speech_fsmn_vad_zh-cn-16k-common-pytorch", # VAD用来切静音
+    punc_model=cur_dir+"ct-punc", # 加标点
     device="cuda"
-)
-# asr_model = AutoModel(
-#     model="speech_paraformer-large-vad-punc-spk_asr_nat-zh-cn",   # 逐字转录
-#     vad_model="speech_fsmn_vad_zh-cn-16k-common-pytorch", # VAD用来切静音
-#     punc_model="ct-punc", # 加标点
-#     device="cuda"
-#     )
+    )
 
 video_url = "https://aiclipcdn.weibo.com/ai_media/temp/c1cb62a72c364ecfb7f695fde0d7fd4d_iUBYcPYQlx08nuw3XGWQ01041200nGSB0E010.mp4"
 print(f'video_url: {video_url}')

@@ -82,16 +82,22 @@ def asr_collect_split_para(asr_text, asr_raw_text, asr_punc_array, asr_timestamp
 # os.environ['MODELSCOPE_CACHE'] = '/data2/zhipeng16/git/yolo8-plus-iopaint/models/asr_models/'
 from funasr import AutoModel
 # 初始化模型
-cur_dir='/data2/zhipeng16/git/yolo8-watermark-brand/models/'
+cur_dir='/workspace/work/zhipeng16/yolo8-plus-iopaint/models/'
 # 模型 ID，用于自动下载，它们是 FunASR 官方定义的
 asr_model_id = "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
-vad_model_id = "fsmn-vad"
+vad_model_id = "speech_fsmn_vad_zh-cn-16k-common-pytorch"
 punc_model_id = "ct-punc"
 
 asr_model = AutoModel(
     model=cur_dir+asr_model_id,
-    device="cuda:0"
+    vad_model=cur_dir+vad_model_id, # VAD用来切静音
+    punc_model=cur_dir+punc_model_id, # 加标点
+    device="cuda:2",
+    disable_update=True,
+    en_post_proc = True
+    
 )
+
 # asr_model = AutoModel(
 #     model="speech_paraformer-large-vad-punc-spk_asr_nat-zh-cn",   # 逐字转录
 #     vad_model="speech_fsmn_vad_zh-cn-16k-common-pytorch", # VAD用来切静音
@@ -100,6 +106,7 @@ asr_model = AutoModel(
 #     )
 
 video_url = "https://aiclipcdn.weibo.com/ai_media/temp/c1cb62a72c364ecfb7f695fde0d7fd4d_iUBYcPYQlx08nuw3XGWQ01041200nGSB0E010.mp4"
+video_url = "https://weibo-ml-wces-push.oss-cn-shanghai.aliyuncs.com/wces/video_13m.mp4?x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-date=20250922T065139Z&x-oss-expires=431999&x-oss-credential=LTAI5tNLPgvob9Kim83vQ3Ch%2F20250922%2Fcn-shanghai%2Foss%2Faliyun_v4_request&x-oss-signature=a0592ccf79422d8350bbc1c876cd3c07b3450c8e049a8c3917dddbc401420ce8"
 print(f'video_url: {video_url}')
 video_path = download_video(video_url, save_path=cur_dir+"FunASR_part/data")
 print(f'video_path: {video_path}')
