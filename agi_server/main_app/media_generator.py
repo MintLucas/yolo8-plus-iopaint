@@ -138,7 +138,7 @@ def process_api_questions_generate_media(
             user_prompt = base_prompt.format(** supply_dict)
             system_prompt = f"你是专业{media_type}场景描述师，擅长结合问题和答案生成符合{style_desc}的视觉文案"
 
-            logger.info(f"receive_id={receive_id} | {question_id} 生成{media_type}文案...")
+            logger.info(f"receive_id={receive_id} | question_id={question_id} 生成{media_type}文案...")
             media_script = tf.call_model_zp(user_prompt=user_prompt, system_prompt=system_prompt, source=SOURCE)
 
             # 2. 生成媒体文件

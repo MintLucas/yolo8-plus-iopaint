@@ -29,6 +29,7 @@ import os
 sys.path.append(os.getcwd())
 from video_generator import process_api_questions_generate_videos  # 导入核心生成函数
 from picture_generator import process_api_questions_generate_pictures  # 导入API定义
+from media_generator import process_api_questions_generate_media
 from util.fast_api_middleware_logging import LogRequestsMiddleware
 from agi_server.main_app.server_help import Server_Help
 current_file_path = os.path.abspath(__file__)
@@ -60,7 +61,7 @@ class SingleQuestion(BaseModel):
 
 class ApiRequest(BaseModel):
     question_list: List[SingleQuestion]
-    mode_type: str = "pic"
+    mode_type: str = "image"
     style_type: str = "q"
     receivetext_id: int = 100
 class ResultItem(BaseModel):
@@ -92,6 +93,7 @@ async def generate_video_path_api(request: ApiRequest):
     }
     para_dict = {}
     para_dict["receive_id"] = request.receivetext_id
+    para_dict["mode_type"] = request.mode_type
     try:
         # 将Pydantic模型列表转为字典列表（适配process_api_questions_generate_videos的参数要求）
         question_list_dict = [q.dict() for q in request.question_list]
@@ -99,10 +101,12 @@ async def generate_video_path_api(request: ApiRequest):
             # 启动异步任务处理
         async def process_call_model():
             try:
-                if request.mode_type == "video":
-                    llm_res = process_api_questions_generate_pictures(questions=question_list_dict,tf=tf,video_model_type=VIDEO_MODEL_TYPE,para_dict=para_dict)
+                if para_dict["mode_type"] == "image":
+                    media_model_type = models_dict["image"]
                 else:
-                    llm_res = process_api_questions_generate_videos(questions=question_list_dict,tf=tf,video_model_type=VIDEO_MODEL_TYPE,para_dict=para_dict)
+                    media_model_type = models_dict["video-huoshan"]
+                llm_res = process_api_questions_generate_media(questions=question_list_dict,tf=tf,media_type = para_dict["mode_type"], media_model_type=media_model_type,para_dict=para_dict)
+                server_help.log.info(f"receive_id={para_dict['receive_id']}异步任务处理成功:{llm_res}")
                 json_res = json.dumps(llm_res, ensure_ascii=False)
                 save_res = "success"
                 res = server_help.sync_llm_result_post(para_dict["receive_id"], json_res)
@@ -118,7 +122,7 @@ async def generate_video_path_api(request: ApiRequest):
         return ApiResponse(
             code=0,
             result="success",
-            task_id=task_id  # 返回唯一任务ID
+            task_id=str(para_dict["receive_id"])  # 返回唯一任务ID
         )
 
     except Exception as e:
@@ -161,4 +165,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='question_video_api:app', host='0.0.0.0', port=4545, workers=1)
+    uvicorn.run(app='question_video_api_server:app', host='0.0.0.0', port=14545, workers=3)
