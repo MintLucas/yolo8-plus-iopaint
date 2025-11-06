@@ -50,7 +50,7 @@ app = FastAPI(
     description="接收问题列表，返回对应视频路径",
     version="1.0.0"
 )
-app.add_middleware(LogRequestsMiddleware, log_folder="server_question_multi")
+# app.add_middleware(LogRequestsMiddleware, log_folder="server_question_multi")
 
 # 2. 定义数据模型（保持不变）
 class SingleQuestion(BaseModel):
