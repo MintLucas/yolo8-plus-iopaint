@@ -215,13 +215,15 @@ class oss_util:
             f.write(img_input)
         return output_path
     
-    def path2url(self, local_file_path = "/workspace/work/zhipeng16/yolo8-plus-iopaint/tmp.png", object_key = "ai_img/tmp.img"):
+    def path2url(self, local_file_path = "/workspace/work/zhipeng16/yolo8-plus-iopaint/tmp.png", object_key = "ai_img/tmp.img", save_local = False):
         if "/" not in local_file_path:
             local_file_path = self.check_video_path(local_file_path)
         filename = os.path.basename(local_file_path)
         #从网络上传
         bucked_object_name = self.upload_file(local_file_path, object_key=object_key + filename)
         res_url = self.get_url(bucked_object_name) 
+        if not save_local:
+            os.remove(local_file_path)
         return res_url
     
 # 当此脚本被直接运行时，调用main函数

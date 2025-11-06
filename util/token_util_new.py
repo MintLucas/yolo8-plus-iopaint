@@ -49,7 +49,8 @@ huoshan_models_list =  [
     "DeepSeek-V3-250324"
 ]
 models_dict = {"video-huoshan": "volcengine:Doubao-Seedance-1.0-pro-250528",
-               "video-split": "dashscope:SplitVideoParts"}
+               "video-split": "dashscope:SplitVideoParts",
+               "image": "volcengine:Doubao-Seedream-4.0-250828"}
 video_prompt_test = "生成一段 10 秒健身教学视频，分镜节奏如下：0-3 秒用文字标题 + 运动场景快速引入，呈现‘夏天练出薄肌身材’的主题；3-7 秒展示居家训练场景（如空地），搭配画外音说明‘无需去健身房，在家即可训练’；7-10 秒特写演示欢聚俯卧撑动作，突出胸部发力细节，字幕标注‘每天 50-100 个，练胸关键动作’。整体画面简洁，节奏紧凑，以实用训练指导为主，结尾可快速闪过‘坚持即见效’的提示文字 --ratio 16:9 --duration 10"
 video_duration = "--duration 10"
 test_video_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/3/97073/2025-09-05/v_d2276be08d62e0fea72d5fe4384f2dc4.mp4?x-oss-date=20250905T025501Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20250905%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=d5b3955f92dc1296d8094146fbdfd110e47b367dba41ba8ff683f4491b41334a"
@@ -297,8 +298,21 @@ class token_fresh:
                 er_msg = traceback.format_exc()
                 self.log.error(f'model err:{utype} {model_id} {er_msg}')
         return groups
-
-    def call_model_zp_video(self,user_prompt = "多个镜头。一名侦探进入一间光线昏暗的房间。他检查桌上的线索，手里拿起桌上的某个物品。镜头转向他正在思索。 --ratio 16:9 --duration 10", system_prompt = "" , model_type = "volcengine:Doubao-Seedance-1.0-pro-250528", source = "356732087"):
+    def img_to_model_ext(self, imgs = [], role = [], type = 'url'):
+        import base64
+        res = []
+        for i in range(len(imgs)):
+            tmp = {
+            "type": "image_url", 
+            "image_url": { 
+                "url": imgs[i] if type == 'url' else f"data:image/jpeg;base64,{base64.b64encode(open(imgs[i], 'rb').read()).decode('utf-8')}"
+            }, 
+            "role": 'first_frame' if i+1 > len(role) else role[i]
+            }
+            res.append(tmp)
+        return res
+    def call_model_zp_video(self,user_prompt = "多个镜头。一名侦探进入一间光线昏暗的房间。他检查桌上的线索，手里拿起桌上的某个物品。镜头转向他正在思索。 --ratio 16:9 --duration 10", system_prompt = "" , model_type = "volcengine:Doubao-Seedance-1.0-pro-250528", source = "356732087",
+                            imgs = []):
         if not user_prompt and not system_prompt:
             return ""
         #线上使用
@@ -314,6 +328,8 @@ class token_fresh:
                 ]
             }
         }
+        if imgs:
+            model_ext["model_ext"]["content"].extend(imgs)
         utype, model_id = model_type.split(":")
         params = {
             'model_id': model_id,
@@ -476,7 +492,7 @@ class token_fresh:
                 self.log.error(f"split_task请求异常: {str(e)}，5秒后重试...")
                 time.sleep(5)
 
-    def download_video_from_data(self, data, save_dir="downloaded_videos"):
+    def download_video_from_data(self, data, save_dir="tmp/tmp_video_res"):
         """
         从数据中解析视频URL并下载
 
