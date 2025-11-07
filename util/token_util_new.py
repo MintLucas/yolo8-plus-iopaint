@@ -367,7 +367,7 @@ class token_fresh:
         self.log.info(f"llm_res_output_json:{llm_res_json}")
         return llm_res_json
 
-    def query_video_task_status(self, task_id, model_type="volcengine:Doubao-Seedance-1.0-pro-250528"):
+    def query_video_task_status(self, task_id, model_type="volcengine:Doubao-Seedance-1.0-pro-250528", single_file_name = "defaut"):
         """
         查询视频生成任务的状态并轮询直到任务完成或失败
 
@@ -411,7 +411,7 @@ class token_fresh:
                 # 根据状态处理
                 if status == "succeeded":
                     self.log.info("----- 任务成功完成 -----")
-                    save_path = self.download_video_from_data(task_result)
+                    save_path = self.download_video_from_data(task_result, single_file_name)
                     return save_path
                 elif status == "failed":
                     self.log.info("----- 任务执行失败 -----")
@@ -517,8 +517,8 @@ class token_fresh:
             parsed_url = urlparse(video_url)
             file_name = os.path.basename(parsed_url.path)
             if not file_name.endswith((".mp4", ".mov", ".avi")):
-                file_name += ".mp4"  # 确保文件后缀正确
-            save_path = os.path.join(save_dir, file_name)
+                save_path = save_dir + f"{file_name}.mp4"  # 确保文件后缀正确
+            # save_path = os.path.join(save_dir, file_name)
 
             # 下载视频
             self.log.info(f"开始下载视频: {video_url}")

@@ -18,10 +18,13 @@ sys.path.append(os.getcwd())
 from util.mylogging import get_logger
 from util.oss_util import oss_util  # OSS工具类
 from util.token_util_new import token_fresh, models_dict  # 模型调用工具类
+from agi_server.main_app.server_help import Server_Help
 
 # 初始化工具与日志
 ou = oss_util()
-logger = get_logger("server_log/media_generator")
+server_help = Server_Help()
+logger = server_help.log
+# logger = get_logger("server_log/media_generator")
 
 # 媒体类型常量
 MEDIA_TYPE_IMAGE = "image"
@@ -68,7 +71,7 @@ def load_prompt_template(media_type: str) -> str:
     }
     try:
         with open(template_paths[media_type], encoding='utf-8') as f:
-            return f.readlines()
+            return f.read()
     except Exception as e:
         logger.error(f"加载{media_type}提示词模板失败: {str(e)}")
         #  fallback默认模板
@@ -112,12 +115,13 @@ def process_api_questions_generate_media(
         try:
             option_index = {"A": 0, "B": 1, "C": 2, "D": 3}[answer_identifier]
             answer = choose_list[option_index]
+            single_file_name = "_".join([question_content, answer])
         except (KeyError, IndexError):
             error = "答案格式错误或选项不存在"
             logger.error(f"receive_id={receive_id} | {question_id} {error}")
             results.append(build_result(question_id, question_content, "", "failed", error))
             continue
-
+       
         # 跳过空问题
         if not question_content:
             error = "问题内容为空"
@@ -142,18 +146,21 @@ def process_api_questions_generate_media(
             media_script = tf.call_model_zp(user_prompt=user_prompt, system_prompt=system_prompt, source=SOURCE)
 
             # 2. 生成媒体文件
+            file_pre_dir = f"tmp_data/ai_{media_type}/{style_key}/"
+            os.makedirs(file_pre_dir, exist_ok=True)
             media_path = generate_media_file(
                 tf=tf,
                 media_script=media_script,
                 model_type=media_model_type,
-                media_type=media_type
+                media_type=media_type,
+                single_file_name = file_pre_dir+single_file_name
             )
             if media_type == MEDIA_TYPE_IMAGE:
-                picture_save_path = f"tmp_data/tmp_pic_res/{question_content}.png"
+                picture_save_path = f"{file_pre_dir}{single_file_name}.png"
                 media_path = ou.img2path(media_path, picture_save_path)
             # 3. 上传OSS并返回URL
-            oss_path = f"ai_{media_type}s/{style_key}/"
-            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path)
+            oss_path = file_pre_dir
+            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=True)
             logger.info(f"receive_id={receive_id} | {question_id} {media_type}生成成功")
             results.append(build_result(question_id, question_content, media_url, "success", ""))
 
@@ -169,7 +176,7 @@ def process_api_questions_generate_media(
     return results
 
 
-def generate_media_file(tf, media_script, model_type, media_type) -> str:
+def generate_media_file(tf, media_script, model_type, media_type, single_file_name = "defaut") -> str:
     """生成媒体文件（图片/视频）并返回本地路径"""
     if media_type == MEDIA_TYPE_IMAGE:
         # 图片生成逻辑
@@ -188,7 +195,7 @@ def generate_media_file(tf, media_script, model_type, media_type) -> str:
         task_id = video_task.get("response_data", {}).get("id", "")
         if not task_id:
             raise ValueError("未获取到视频任务ID")
-        video_path = tf.query_video_task_status(task_id)
+        video_path = tf.query_video_task_status(task_id, model_type = model_type, single_file_name=single_file_name)
         if not video_path or not os.path.exists(video_path):
             raise FileNotFoundError(f"视频路径不存在（任务ID：{task_id}）")
         return video_path

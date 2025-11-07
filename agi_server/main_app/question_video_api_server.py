@@ -32,6 +32,7 @@ from picture_generator import process_api_questions_generate_pictures  # 导入A
 from media_generator import process_api_questions_generate_media
 from util.fast_api_middleware_logging import LogRequestsMiddleware
 from agi_server.main_app.server_help import Server_Help
+import traceback
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
 parent_dir = os.path.dirname(current_dir)
@@ -79,9 +80,13 @@ VIDEO_MODEL_TYPE = models_dict["video-huoshan"]  # 视频模型类型（与video
 TASK_RECORD: Dict[str, Dict] = {}  # 存储任务状态，方便测试时查询
 
 
-# 核心API接口（POST方法）- 已修改为调用真实生成逻辑
+import json  # 新增json模块导入
+
 @app.post(path="/generate-video-path", response_model=ApiResponse, summary="生成问题对应的视频路径", tags=["视频路径生成"])
 async def generate_video_path_api(request: ApiRequest):
+    # 新增：记录完整传入数据体日志
+    server_help.log.info(f"收到请求：传入数据体={json.dumps(request.dict(), ensure_ascii=False)}")  # 完整记录传入数据
+
     # 生成唯一任务ID（方便测试追踪）
     task_id = str(uuid.uuid4())
     start_time = time.time()
@@ -98,7 +103,6 @@ async def generate_video_path_api(request: ApiRequest):
         # 将Pydantic模型列表转为字典列表（适配process_api_questions_generate_videos的参数要求）
         question_list_dict = [q.dict() for q in request.question_list]
 
-            # 启动异步任务处理
         async def process_call_model():
             try:
                 if para_dict["mode_type"] == "image":
@@ -114,16 +118,23 @@ async def generate_video_path_api(request: ApiRequest):
                 # 处理异步任务中的异常
                 error_message = f"异步任务处理失败: {str(e)}"
                 server_help.log.error(error_message)
+                server_help.log.error(traceback.format_exc())
                 save_res = "异步任务处理失败"
                 # 可以选择发送错误邮件或记录到日志等
         
         # 创建并启动异步任务，但不等待它完成
         asyncio.create_task(process_call_model())
-        return ApiResponse(
+        
+        # 构建返回结果对象
+        result = ApiResponse(
             code=0,
             result="success",
             task_id=str(para_dict["receive_id"])  # 返回唯一任务ID
         )
+        
+        # 新增：记录完整传出数据体日志
+        server_help.log.info(f"返回结果：传出数据体={json.dumps(result.dict(), ensure_ascii=False)}")  # 完整记录返回数据
+        return result
 
     except Exception as e:
         # 捕获异常，更新任务失败状态
