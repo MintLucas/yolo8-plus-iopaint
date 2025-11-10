@@ -61,6 +61,36 @@ def get_random_style(media_type: str) -> tuple:
     style_dict = style_maps[media_type]
     random_key = random.choice(list(style_dict.keys()))
     return random_key, style_dict[random_key]
+def get_random_Q(media_type: str) -> tuple:
+    """
+    获取随机媒体风格（区分图片/视频）
+    :param media_type: 媒体类型（image/video）
+    :return: (风格标识, 风格描述)
+    """
+    style_maps = {
+        MEDIA_TYPE_IMAGE: {
+            "ukiyoe": "日式浮世绘（木版画质感，色彩浓郁饱和，线条简洁有力）",
+            "ink_style": "水墨国风（以黑白为主，少量色彩点缀，留白充足，意境悠远）",
+            "pixel_art": "像素风（画面边缘有轻微像素锯齿，1990年代红白机游戏画面质感）",
+            "us_cartoon": "美式卡通（色彩鲜艳饱和，线条粗黑圆润，阴影是纯色块）",
+            "low_poly": "低多边形（三角形和四边形拼接，色彩明快干净，无渐变和阴影，简约几何感）",
+            "morandi_color": "莫兰迪色系（色彩降低饱和度，带灰色调，画面柔和安静，无强烈光影）",
+            "cyberpunk": "赛博朋克（冷色调为主，光影强烈对比）",
+            "midjourney_style": "Midjourney风格（超现实构图，8K，HDR效果，细节丰富）",
+            "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感，4K）",
+            "retro_hongkong": "复古港风（暖黄色胶片颗粒，轻微褪色效果，16:9电影画幅，无文字）",
+            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，8K）"
+        },
+        MEDIA_TYPE_VIDEO: {
+            "cinematic": "电影感（运镜流畅，景深明显，色调统一）",
+            "animation": "动画风格（画面流畅，色彩明快，角色动作夸张）",
+            "documentary": "纪录片风格（手持镜头感，色调自然）",
+            "vintage": "复古风格（颗粒感，低饱和度，模拟胶片效果）"
+        }
+    }
+    style_dict = style_maps[media_type]
+    random_key = random.choice(list(style_dict.keys()))
+    return random_key, style_dict[random_key]
 
 
 def load_prompt_template(media_type: str) -> str:
@@ -153,7 +183,8 @@ def process_api_questions_generate_media(
                 media_script=media_script,
                 model_type=media_model_type,
                 media_type=media_type,
-                single_file_name = file_pre_dir+single_file_name
+                single_file_name = file_pre_dir+single_file_name,
+                with_pic=[]
             )
             if media_type == MEDIA_TYPE_IMAGE:
                 picture_save_path = f"{file_pre_dir}{single_file_name}.png"
@@ -176,7 +207,7 @@ def process_api_questions_generate_media(
     return results
 
 
-def generate_media_file(tf, media_script, model_type, media_type, single_file_name = "defaut") -> str:
+def generate_media_file(tf, media_script, model_type, media_type, single_file_name = "defaut", with_pic=[]) -> str:
     """生成媒体文件（图片/视频）并返回本地路径"""
     if media_type == MEDIA_TYPE_IMAGE:
         # 图片生成逻辑
@@ -190,8 +221,9 @@ def generate_media_file(tf, media_script, model_type, media_type, single_file_na
 
     elif media_type == MEDIA_TYPE_VIDEO:
         # 视频生成逻辑（带参数）
-        video_params = "--ratio 16:9 --duration 10"
-        video_task = tf.call_model_zp_video(f"{media_script} {VIDEO_PARAMS}", model_type=model_type)
+        if with_pic:
+            with_pic = tf.img_to_model_ext(with_pic)
+        video_task = tf.call_model_zp_video(f"{media_script} {VIDEO_PARAMS}", model_type=model_type, source=SOURCE, imgs=with_pic)
         task_id = video_task.get("response_data", {}).get("id", "")
         if not task_id:
             raise ValueError("未获取到视频任务ID")
@@ -209,7 +241,7 @@ def build_result(question_id: str, question: str, path: str, status: str, error:
     return {
         "question_id": question_id,
         "question": question,
-        f"{path.split('.')[-1] if path else 'media'}_path": path,  # 动态键名（image_path/video_path）
+        f"media_path": path,  # 动态键名（image_path/video_path）
         "status": status,
         "error_msg": error
     }

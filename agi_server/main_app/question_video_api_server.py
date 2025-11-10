@@ -108,7 +108,7 @@ async def generate_video_path_api(request: ApiRequest):
                 if para_dict["mode_type"] == "image":
                     media_model_type = models_dict["image"]
                 else:
-                    media_model_type = models_dict["video-huoshan"]
+                    media_model_type = models_dict["video-huoshan-fast"]
                 llm_res = process_api_questions_generate_media(questions=question_list_dict,tf=tf,media_type = para_dict["mode_type"], media_model_type=media_model_type,para_dict=para_dict)
                 server_help.log.info(f"receive_id={para_dict['receive_id']}异步任务处理成功:{llm_res}")
                 json_res = json.dumps(llm_res, ensure_ascii=False)

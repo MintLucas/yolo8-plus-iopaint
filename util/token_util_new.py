@@ -49,6 +49,7 @@ huoshan_models_list =  [
     "DeepSeek-V3-250324"
 ]
 models_dict = {"video-huoshan": "volcengine:Doubao-Seedance-1.0-pro-250528",
+               "video-huoshan-fast":"volcengine:Doubao-Seedance-1.0-pro-fast-251015",
                "video-split": "dashscope:SplitVideoParts",
                "image": "volcengine:Doubao-Seedream-4.0-250828"}
 video_prompt_test = "生成一段 10 秒健身教学视频，分镜节奏如下：0-3 秒用文字标题 + 运动场景快速引入，呈现‘夏天练出薄肌身材’的主题；3-7 秒展示居家训练场景（如空地），搭配画外音说明‘无需去健身房，在家即可训练’；7-10 秒特写演示欢聚俯卧撑动作，突出胸部发力细节，字幕标注‘每天 50-100 个，练胸关键动作’。整体画面简洁，节奏紧凑，以实用训练指导为主，结尾可快速闪过‘坚持即见效’的提示文字 --ratio 16:9 --duration 10"
@@ -516,8 +517,9 @@ class token_fresh:
             # 从URL中提取文件名（取最后一段作为文件名）
             parsed_url = urlparse(video_url)
             file_name = os.path.basename(parsed_url.path)
+            save_path = save_dir + f"_{file_name}"
             if not file_name.endswith((".mp4", ".mov", ".avi")):
-                save_path = save_dir + f"{file_name}.mp4"  # 确保文件后缀正确
+                save_path += ".mp4"  # 确保文件后缀正确
             # save_path = os.path.join(save_dir, file_name)
 
             # 下载视频
