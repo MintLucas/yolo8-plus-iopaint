@@ -131,7 +131,7 @@ def process_api_questions_generate_media(
     :param para_dict: 额外参数（含receive_id等）
     :return: 生成结果列表
     """
-    receive_id = para_dict.get("receive_id", "unknown_receive_id")
+    receive_id = para_dict.get("task_id", "unknown_receive_id")
     results = []
     total = len(questions)
 
@@ -170,21 +170,29 @@ def process_api_questions_generate_media(
         try:
             # 1. 生成媒体描述文案
             style_key, style_desc = get_random_style(media_type)
+            if para_dict.get("style_type", ""):
+                style_key, style_desc = para_dict["style_type"].split("#")
+                
             supply_dict = {
                 "question_content": question_content,
                 "answer": answer,
                 "style": style_desc,
                 "media_type": media_type
             }
+            if para_dict.get("prompt1", ""):
+                base_prompt = para_dict["prompt1"]
+                
             user_prompt = base_prompt.format(** supply_dict)
             system_prompt = f"你是专业{media_type}场景描述师，擅长结合问题和答案生成符合{style_desc}的视觉文案"
 
             logger.info(f"receive_id={receive_id} | question_id={question_id} 生成{media_type}文案...")
-            if para_dict.get("prompt1", ""):
-                user_prompt = para_dict["prompt1"]
-            media_script = tf.call_model_zp(user_prompt=user_prompt, system_prompt=system_prompt, source=SOURCE)
+
+                
             if para_dict.get("prompt2", ""):
                 media_script = para_dict["prompt2"]
+            else:
+                media_script = tf.call_model_zp(user_prompt=user_prompt, system_prompt=system_prompt, source=SOURCE)
+
             # 2. 生成媒体文件
             file_pre_dir = f"tmp_data/ai_{media_type}/{style_key}/"
             os.makedirs(file_pre_dir, exist_ok=True)
@@ -203,7 +211,7 @@ def process_api_questions_generate_media(
             oss_path = file_pre_dir
             media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=True)
             logger.info(f"receive_id={receive_id} | {question_id} {media_type}生成成功")
-            results.append(build_result(question_id, question_content, media_url, "success", ""))
+            results.append(build_result(question_id, question_content, media_url, "success", "", media_script))
 
         except Exception as e:
             error = f"{media_type}生成失败: {str(e)[:100]}"

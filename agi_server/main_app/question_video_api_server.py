@@ -63,8 +63,13 @@ class SingleQuestion(BaseModel):
 class ApiRequest(BaseModel):
     question_list: List[SingleQuestion]
     mode_type: str = "image"
-    style_type: str = "q"
+    style_type: str = ""
     receivetext_id: int = 100
+    prompt1: str = ""
+    prompt2: str = ""
+    with_pic: list = []
+    task_id: int = 100
+    
 class ResultItem(BaseModel):
     question_id: str
     question: str
@@ -96,9 +101,7 @@ async def generate_video_path_api(request: ApiRequest):
         "start_time": start_time,
         "total_questions": len(request.question_list)
     }
-    para_dict = {}
-    para_dict["receive_id"] = request.receivetext_id
-    para_dict["mode_type"] = request.mode_type
+    para_dict = request.dict()
     try:
         # 将Pydantic模型列表转为字典列表（适配process_api_questions_generate_videos的参数要求）
         question_list_dict = [q.dict() for q in request.question_list]
@@ -110,10 +113,10 @@ async def generate_video_path_api(request: ApiRequest):
                 else:
                     media_model_type = models_dict["video-huoshan-fast"]
                 llm_res = process_api_questions_generate_media(questions=question_list_dict,tf=tf,media_type = para_dict["mode_type"], media_model_type=media_model_type,para_dict=para_dict)
-                server_help.log.info(f"receive_id={para_dict['receive_id']}异步任务处理成功:{llm_res}")
+                server_help.log.info(f"task_id={para_dict['task_id']}异步任务处理成功:{llm_res}")
                 json_res = json.dumps(llm_res, ensure_ascii=False)
                 save_res = "success"
-                res = server_help.sync_llm_result_post(para_dict["receive_id"], json_res)
+                res = server_help.sync_llm_result_post(para_dict["task_id"], json_res)
             except Exception as e:
                 # 处理异步任务中的异常
                 error_message = f"异步任务处理失败: {str(e)}"
@@ -129,7 +132,7 @@ async def generate_video_path_api(request: ApiRequest):
         result = ApiResponse(
             code=0,
             result="success",
-            task_id=str(para_dict["receive_id"])  # 返回唯一任务ID
+            task_id=str(para_dict["task_id"])  # 返回唯一任务ID
         )
         
         # 新增：记录完整传出数据体日志

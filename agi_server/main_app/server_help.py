@@ -23,7 +23,7 @@ class Server_Help:
         }
 
         # 记录同步前的数据日志
-        self.log.info(f"开始同步LLM结果 | task_id: {task_id} | 待同步内容: {text_content[:200]}")  # 限制内容长度，避免日志过长
+        self.log.info(f"开始同步LLM结果 | task_id: {task_id} | 待同步内容: {text_content[:50]}")  # 限制内容长度，避免日志过长
         self.log.debug(f"同步请求详情 | URL: {url} | 请求头: {headers} | 请求数据: {data}")  # 调试级别日志记录详细参数
 
         response_content = None

@@ -9,6 +9,8 @@ import alibabacloud_oss_v2 as oss
 import os,sys
 import datetime
 import requests,json
+from io import BytesIO
+from PIL import Image
 sys.path.append(os.getcwd())
 from util.mylogging import get_logger
 from urllib.parse import urlparse
@@ -207,12 +209,17 @@ class oss_util:
         except OSError as e:
             self.log.error(f"Error deleting file {file_path}: {e}")
             
-    def img2path(self, img_input, output_path = 'tmp.png', type = 'b64'):
+    def img2path(self, img_input, output_path = 'tmp.png', type = 'b64', size = (1131, 852)):
         import base64
         if type == 'b64':
             img_input = base64.b64decode(img_input)
-        with open(output_path, 'wb') as f:
-            f.write(img_input)
+        image = Image.open(BytesIO(img_input))
+        # 调整图片大小（如果 size 已指定且有效）
+        if size and isinstance(size, tuple) and len(size) == 2:
+            image = image.resize(size)
+        image.save(output_path)
+        # with open(output_path, 'wb') as f:
+        #     f.write(img_input)
         return output_path
     
     def path2url(self, local_file_path = "/workspace/work/zhipeng16/yolo8-plus-iopaint/tmp.png", object_key = "ai_img/tmp.img", save_local = False):
