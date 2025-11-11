@@ -19,7 +19,7 @@ from util.mylogging import get_logger
 from util.oss_util import oss_util  # OSS工具类
 from util.token_util_new import token_fresh, models_dict  # 模型调用工具类
 from agi_server.main_app.server_help import Server_Help
-
+from typing import Dict, Tuple
 # 初始化工具与日志
 ou = oss_util()
 server_help = Server_Help()
@@ -61,37 +61,44 @@ def get_random_style(media_type: str) -> tuple:
     style_dict = style_maps[media_type]
     random_key = random.choice(list(style_dict.keys()))
     return random_key, style_dict[random_key]
-def get_random_Q(media_type: str) -> tuple:
+def get_random_Q(directory_path : str = "agi_server/main_app/q_x" , filename_or_extension : str = ".png") -> Tuple[str, str]:
     """
-    获取随机媒体风格（区分图片/视频）
-    :param media_type: 媒体类型（image/video）
-    :return: (风格标识, 风格描述)
+    获取指定路径下的随机文件或指定文件。
     """
-    style_maps = {
-        MEDIA_TYPE_IMAGE: {
-            "ukiyoe": "日式浮世绘（木版画质感，色彩浓郁饱和，线条简洁有力）",
-            "ink_style": "水墨国风（以黑白为主，少量色彩点缀，留白充足，意境悠远）",
-            "pixel_art": "像素风（画面边缘有轻微像素锯齿，1990年代红白机游戏画面质感）",
-            "us_cartoon": "美式卡通（色彩鲜艳饱和，线条粗黑圆润，阴影是纯色块）",
-            "low_poly": "低多边形（三角形和四边形拼接，色彩明快干净，无渐变和阴影，简约几何感）",
-            "morandi_color": "莫兰迪色系（色彩降低饱和度，带灰色调，画面柔和安静，无强烈光影）",
-            "cyberpunk": "赛博朋克（冷色调为主，光影强烈对比）",
-            "midjourney_style": "Midjourney风格（超现实构图，8K，HDR效果，细节丰富）",
-            "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感，4K）",
-            "retro_hongkong": "复古港风（暖黄色胶片颗粒，轻微褪色效果，16:9电影画幅，无文字）",
-            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，8K）"
-        },
-        MEDIA_TYPE_VIDEO: {
-            "cinematic": "电影感（运镜流畅，景深明显，色调统一）",
-            "animation": "动画风格（画面流畅，色彩明快，角色动作夸张）",
-            "documentary": "纪录片风格（手持镜头感，色调自然）",
-            "vintage": "复古风格（颗粒感，低饱和度，模拟胶片效果）"
-        }
-    }
-    style_dict = style_maps[media_type]
-    random_key = random.choice(list(style_dict.keys()))
-    return random_key, style_dict[random_key]
+    try:
+        # --- 步骤 1: 优先尝试作为【完整文件名】处理 ---
+        full_path_for_file = os.path.join(directory_path, filename_or_extension)
+        if os.path.isfile(full_path_for_file):
+            return filename_or_extension, full_path_for_file
+        extension = filename_or_extension
+        if not extension.startswith('.'):
+            # 如果传入的不是完整文件名，则视为后缀，并加上点号
+            extension = '.' + extension
+        file_map: Dict[str, str] = {}
+        # 2.1 遍历目录，创建文件字典
+        for filename in os.listdir(directory_path):
+            current_full_path = os.path.join(directory_path, filename)
 
+            # 检查是否为文件且后缀匹配（忽略大小写）
+            if os.path.isfile(current_full_path) and filename.lower().endswith(extension.lower()):
+                # key是文件名，value是完整路径
+                file_map[filename] = current_full_path
+        # 2.2 随机选取对应的 key 和 value
+        if not file_map:
+            return '', ''
+
+        # 随机选择一个 key
+        random_filename = random.choice(list(file_map.keys()))
+        # 获取对应的 value（完整路径）
+        random_full_path = file_map[random_filename]
+        return random_filename, random_full_path
+
+    except FileNotFoundError:
+        print(f"❌ 错误：路径 '{directory_path}' 不存在。")
+        return '', ''
+    except Exception as e:
+        print(f"❌ 处理文件时发生错误：{e}")
+        return '', ''
 
 def load_prompt_template(media_type: str) -> str:
     """加载对应媒体类型的提示词模板"""
@@ -173,8 +180,11 @@ def process_api_questions_generate_media(
             system_prompt = f"你是专业{media_type}场景描述师，擅长结合问题和答案生成符合{style_desc}的视觉文案"
 
             logger.info(f"receive_id={receive_id} | question_id={question_id} 生成{media_type}文案...")
+            if para_dict.get("prompt1", ""):
+                user_prompt = para_dict["prompt1"]
             media_script = tf.call_model_zp(user_prompt=user_prompt, system_prompt=system_prompt, source=SOURCE)
-
+            if para_dict.get("prompt2", ""):
+                media_script = para_dict["prompt2"]
             # 2. 生成媒体文件
             file_pre_dir = f"tmp_data/ai_{media_type}/{style_key}/"
             os.makedirs(file_pre_dir, exist_ok=True)
@@ -184,7 +194,7 @@ def process_api_questions_generate_media(
                 model_type=media_model_type,
                 media_type=media_type,
                 single_file_name = file_pre_dir+single_file_name,
-                with_pic=[]
+                para_dict = para_dict
             )
             if media_type == MEDIA_TYPE_IMAGE:
                 picture_save_path = f"{file_pre_dir}{single_file_name}.png"
@@ -198,7 +208,7 @@ def process_api_questions_generate_media(
         except Exception as e:
             error = f"{media_type}生成失败: {str(e)[:100]}"
             logger.error(f"receive_id={receive_id} | {question_id} {error}")
-            results.append(build_result(question_id, question_content, "", "failed", error))
+            results.append(build_result(question_id, question_content, "", "failed", error, media_script))
             continue
 
     # 汇总结果
@@ -207,7 +217,7 @@ def process_api_questions_generate_media(
     return results
 
 
-def generate_media_file(tf, media_script, model_type, media_type, single_file_name = "defaut", with_pic=[]) -> str:
+def generate_media_file(tf, media_script, model_type, media_type, single_file_name = "defaut", para_dict = {}) -> str:
     """生成媒体文件（图片/视频）并返回本地路径"""
     if media_type == MEDIA_TYPE_IMAGE:
         # 图片生成逻辑
@@ -221,8 +231,10 @@ def generate_media_file(tf, media_script, model_type, media_type, single_file_na
 
     elif media_type == MEDIA_TYPE_VIDEO:
         # 视频生成逻辑（带参数）
+        with_pic = para_dict.get("with_pic", [])
         if with_pic:
-            with_pic = tf.img_to_model_ext(with_pic)
+            img_name, img_path = get_random_Q()
+            with_pic = tf.img_to_model_ext([img_path], type="base64")
         video_task = tf.call_model_zp_video(f"{media_script} {VIDEO_PARAMS}", model_type=model_type, source=SOURCE, imgs=with_pic)
         task_id = video_task.get("response_data", {}).get("id", "")
         if not task_id:
@@ -236,14 +248,15 @@ def generate_media_file(tf, media_script, model_type, media_type, single_file_na
         raise ValueError(f"不支持的媒体类型：{media_type}")
 
 
-def build_result(question_id: str, question: str, path: str, status: str, error: str) -> Dict[str, str]:
+def build_result(question_id: str, question: str, path: str, status: str, error: str, media_script: str) -> Dict[str, str]:
     """统一结果格式构造函数"""
     return {
         "question_id": question_id,
         "question": question,
         f"media_path": path,  # 动态键名（image_path/video_path）
         "status": status,
-        "error_msg": error
+        "error_msg": error,
+        "media_script": media_script
     }
 
 
@@ -272,6 +285,7 @@ def test_media_generator(tf, media_type: str = MEDIA_TYPE_IMAGE):
 
 
 if __name__ == '__main__':
+    res = get_random_Q("agi_server/main_app/q_x", "q_weibo_zo.png")
     tf = token_fresh()
     # 测试图片生成
     test_media_generator(tf, MEDIA_TYPE_IMAGE)
