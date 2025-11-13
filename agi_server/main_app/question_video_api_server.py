@@ -179,4 +179,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='question_video_api_server:app', host='0.0.0.0', port=14545, workers=3)
+    uvicorn.run(app='question_video_api_server:app', host='0.0.0.0', port=14545, workers=5)

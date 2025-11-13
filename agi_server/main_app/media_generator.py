@@ -103,8 +103,8 @@ def get_random_Q(directory_path : str = "agi_server/main_app/q_x" , filename_or_
 def load_prompt_template(media_type: str) -> str:
     """加载对应媒体类型的提示词模板"""
     template_paths = {
-        MEDIA_TYPE_IMAGE: "config/prompt/image_actor_prompt.md",
-        MEDIA_TYPE_VIDEO: "config/prompt/video_actor_prompt.md"
+        MEDIA_TYPE_IMAGE: "config/prompt/image_actor_prompt_v3.md",
+        MEDIA_TYPE_VIDEO: "config/prompt/video_actor_prompt_v2.md"
     }
     try:
         with open(template_paths[media_type], encoding='utf-8') as f:
@@ -184,7 +184,7 @@ def process_api_questions_generate_media(
                 
             user_prompt = base_prompt.format(** supply_dict)
             system_prompt = f"你是专业{media_type}场景描述师，擅长结合问题和答案生成符合{style_desc}的视觉文案"
-
+            system_prompt = ""
             logger.info(f"receive_id={receive_id} | question_id={question_id} 生成{media_type}文案...")
 
                 
@@ -206,10 +206,10 @@ def process_api_questions_generate_media(
             )
             if media_type == MEDIA_TYPE_IMAGE:
                 picture_save_path = f"{file_pre_dir}{single_file_name}.png"
-                media_path = ou.img2path(media_path, picture_save_path)
+                media_path = ou.img2path(media_path, picture_save_path, size = ())
             # 3. 上传OSS并返回URL
             oss_path = file_pre_dir
-            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=True)
+            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=False)
             logger.info(f"receive_id={receive_id} | {question_id} {media_type}生成成功")
             results.append(build_result(question_id, question_content, media_url, "success", "", media_script))
 
