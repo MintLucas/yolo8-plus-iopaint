@@ -232,7 +232,7 @@ class token_fresh:
                 "response_format": response_format,
                 "watermark": True,
                 "sequential_image_generation": "disabled",
-                "size": "1k"
+                "size": "1152x864"
                 }
         }
         # if imgs:
