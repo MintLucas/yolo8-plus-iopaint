@@ -511,8 +511,7 @@ class token_fresh:
                 self.log.info("未找到视频URL")
                 return
 
-            # 创建保存目录
-            os.makedirs(save_dir, exist_ok=True)
+
 
             # 从URL中提取文件名（取最后一段作为文件名）
             parsed_url = urlparse(video_url)
@@ -525,7 +524,10 @@ class token_fresh:
             # 下载视频
             self.log.info(f"开始下载视频: {video_url}")
             self.log.info(f"保存路径: {save_path}")
-
+            save_dir_final = os.path.dirname(full_file_path)
+            # 创建保存目录
+            os.makedirs(save_dir_final, exist_ok=True)
+            
             # 发送请求并流式下载
             with requests.get(video_url, stream=True, timeout=30) as r:
                 r.raise_for_status()  # 检查请求是否成功
