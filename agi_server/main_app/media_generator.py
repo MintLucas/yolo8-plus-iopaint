@@ -46,16 +46,39 @@ def get_random_style(media_type: str) -> tuple:
             "low_poly": "低多边形（三角形和四边形拼接，色彩明快干净，无渐变和阴影，简约几何感）",
             # "morandi_color": "莫兰迪色系（色彩降低饱和度，带灰色调，画面柔和安静，无强烈光影）",
             # "cyberpunk": "赛博朋克（冷色调为主，光影强烈对比）",
-            "midjourney_style": "Midjourney风格（超现实构图，8K，HDR效果，细节丰富）",
-            "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感，4K）",
+            "midjourney_style": "Midjourney风格（超现实构图，1K，HDR效果，细节丰富）",
+            "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感，1K）",
             "retro_hongkong": "复古港风（暖黄色胶片颗粒，轻微褪色效果，16:9电影画幅，无文字）",
-            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，8K）"
+            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，1K）"
         },
         MEDIA_TYPE_VIDEO: {
-            "cinematic": "电影感（运镜流畅，景深明显，色调统一）",
-            "animation": "动画风格（画面流畅，色彩明快，角色动作夸张）",
-            "documentary": "纪录片风格（手持镜头感，色调自然）",
-            "vintage": "复古风格（颗粒感，低饱和度，模拟胶片效果）"
+# 1. 绘画/艺术媒介 (Painting/Art Mediums)
+    "ukiyoe": "日式浮世绘（木版画质感，色彩浓郁饱和，线条简洁有力，无阴影）",
+    "ink_style": "水墨国风（以黑白为主，少量色彩点缀，留白充足，意境悠远，毛笔笔触）",
+    "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，光影斑驳，油画质感）",
+    "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感）", 
+    # ^ 删除了 "4K"，因为“绘本插画”本身已经定义了风格。
+
+    # 2. 电脑/数字风格 (Digital/Computer Styles)
+    "pixel_art": "像素风（画面边缘有明显像素锯齿，色彩表有限，1990年代红白机游戏画面质感）",
+    "low_poly": "低多边形（所有物体均由可见的三角形和四边形拼接，色彩明快干净，无渐变，简约几何感）",
+    
+    # 3. 动画风格 (Animation Styles)
+    "cel_animation": "2D赛璐璐动画（清晰的黑色轮廓线，色彩平铺，阴影是硬色块，如80年代日本动画）",
+    "animation": "动画风格（画面流畅，色彩明快，角色动作夸张）",
+    "us_cartoon": "美式卡通（色彩鲜艳饱和，线条粗黑圆润，无复杂光影）",
+    "3d_pixar": "3D动画风格（CG渲染，模型表面光滑，有体积感，皮克斯风格，光影和景深模拟真实）",
+
+    # 4. 模拟/胶片风格 (Analog/Film Styles)
+    # [这些是“安全”风格，因为“颗粒”和“模糊”会主动“隐藏”VLM的瑕疵]
+    "vintage_film": "复古胶片风格（画面有明显颗粒感，色彩饱和度偏低，轻微褪色，模拟8mm胶片效果）",
+    "retro_hongkong": "复古港风（整体色调偏暖黄，有胶片颗粒感，轻微褪色效果，画面对比度略高）",
+
+    # 5. [高风险] 真实/细节风格 (Realistic/Detailed Styles)
+    # [我把 Midjourney 风格单独拿出来并做了“安全化”处理]
+    "surreal_detailed": "超现实主义风格（戏剧性构图，光影对比强烈，细节丰富，纹理清晰）",
+    # ^ 删除了 "Midjourney" (品牌词), "8K", "HDR" (技术词)。
+    # ^ 保留了“细节丰富”和“纹理清晰”，这已经足够，但风险仍高于其他风格。
         }
     }
     style_dict = style_maps[media_type]
@@ -104,7 +127,7 @@ def load_prompt_template(media_type: str) -> str:
     """加载对应媒体类型的提示词模板"""
     template_paths = {
         MEDIA_TYPE_IMAGE: "config/prompt/image_actor_prompt_v3.md",
-        MEDIA_TYPE_VIDEO: "config/prompt/video_actor_prompt_v2.md"
+        MEDIA_TYPE_VIDEO: "config/prompt/video_actor_prompt_v4.md"
     }
     try:
         with open(template_paths[media_type], encoding='utf-8') as f:
@@ -209,7 +232,7 @@ def process_api_questions_generate_media(
                 media_path = ou.img2path(media_path, picture_save_path, size = ())
             # 3. 上传OSS并返回URL
             oss_path = file_pre_dir
-            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=False)
+            media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=True)
             logger.info(f"receive_id={receive_id} | {question_id} {media_type}生成成功")
             results.append(build_result(question_id, question_content, media_url, "success", "", media_script))
 
