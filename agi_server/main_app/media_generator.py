@@ -88,7 +88,7 @@ def get_random_style(media_type: str) -> tuple:
     
     # 3. 动画风格 (Animation Styles)
     "cel_animation": "2D赛璐璐动画（清晰的黑色轮廓线，色彩平铺，阴影是硬色块，如80年代日本动画）",
-    "animation": "动画风格（画面流畅，色彩明快，角色动作夸张）",
+    "animation": "c）",
     "us_cartoon": "美式卡通（色彩鲜艳饱和，线条粗黑圆润，无复杂光影）",
     "3d_pixar": "3D动画风格（CG渲染，模型表面光滑，有体积感，皮克斯风格，光影和景深模拟真实）",
 
@@ -217,6 +217,9 @@ def process_api_questions_generate_media(
             style_key, style_desc = get_random_style(media_type)
             if para_dict.get("style_type", ""):
                 style_key, style_desc = para_dict["style_type"].split("#")
+            if para_dict.get("with_pic", ""):
+                style_key, style_desc = "q_version_chibi", "动画风格（画面流畅，色彩明快，角色动作夸张）"
+            
                 
             supply_dict = {
                 "question_content": question_content,
