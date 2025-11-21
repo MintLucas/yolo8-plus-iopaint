@@ -524,6 +524,7 @@ class token_fresh:
             # 下载视频
             self.log.info(f"开始下载视频: {video_url}")
             self.log.info(f"保存路径: {save_path}")
+            full_file_path = os.path.dirname(save_path)
             save_dir_final = os.path.dirname(full_file_path)
             # 创建保存目录
             os.makedirs(save_dir_final, exist_ok=True)
