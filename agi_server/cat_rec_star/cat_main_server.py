@@ -52,6 +52,8 @@ class SingleQuestion(BaseModel):
 class ApiRequest(BaseModel):
     task_id: int = 100
     blog_text: str = ""
+    blog_img: list = []
+    blog_video: list = []
     user_info: str = ""
     history_blog: list = []
     reference_blog: list = []
