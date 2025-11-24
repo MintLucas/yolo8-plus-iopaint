@@ -51,7 +51,8 @@ huoshan_models_list =  [
 models_dict = {"video-huoshan": "volcengine:Doubao-Seedance-1.0-pro-250528",
                "video-huoshan-fast":"volcengine:Doubao-Seedance-1.0-pro-fast-251015",
                "video-split": "dashscope:SplitVideoParts",
-               "image": "volcengine:Doubao-Seedream-4.0-250828"}
+               "image": "volcengine:Doubao-Seedream-4.0-250828",
+               "text-huoshan": "volcengine:Doubao-Seed-1.6-flash"}
 video_prompt_test = "生成一段 10 秒健身教学视频，分镜节奏如下：0-3 秒用文字标题 + 运动场景快速引入，呈现‘夏天练出薄肌身材’的主题；3-7 秒展示居家训练场景（如空地），搭配画外音说明‘无需去健身房，在家即可训练’；7-10 秒特写演示欢聚俯卧撑动作，突出胸部发力细节，字幕标注‘每天 50-100 个，练胸关键动作’。整体画面简洁，节奏紧凑，以实用训练指导为主，结尾可快速闪过‘坚持即见效’的提示文字 --ratio 16:9 --duration 10"
 video_duration = "--duration 10"
 test_video_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/3/97073/2025-09-05/v_d2276be08d62e0fea72d5fe4384f2dc4.mp4?x-oss-date=20250905T025501Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20250905%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=d5b3955f92dc1296d8094146fbdfd110e47b367dba41ba8ff683f4491b41334a"
