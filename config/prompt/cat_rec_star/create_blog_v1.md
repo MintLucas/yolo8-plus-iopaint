@@ -43,16 +43,16 @@
 <输出示例>
 输出为JSON格式，包含博文MID、博主昵称、博文内容、推荐理由以及评分明细和总分，格式如下：
 {
-  "博文MID": "",
-  "博主昵称": "博主昵称",
-  "博文内容": "博文内容",
-  "推荐理由": "推荐原因",
-  "评分": {
-    "与历史博文匹配度": score_1,
-    "内容深度": score_2,
-    "情感共鸣与互动潜力": score_3,
-    "利他性": score_4,
+  "blog_mid": "",
+  "blogger_nickname": "博主昵称",
+  "blog_content": "博文内容",
+  "recommendation_reason": "推荐原因",
+  "score": {
+    "match_with_history_blogs": score_1,
+    "content_depth": score_2,
+    "emotional_resonance_and_interaction_potential": score_3,
+    "altruism": score_4
   },
-  "总分": total_score
+  "total_score": total_score
 }
 </输出示例>
