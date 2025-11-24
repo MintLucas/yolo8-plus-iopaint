@@ -16,7 +16,7 @@ class Cat_Server_help:
         self.log = log
         self.session = requests.session()
         self.tf = token_fresh()
-        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v1.md"
+        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v2.md"
         self.supply_key = ["blog_text","blog_img", "blog_video", "user_info", "history_blog", "reference_blog"]
     def sync_llm_result_post(self, task_id, text_content):
         # 正式地址

@@ -44,6 +44,8 @@
 <输出示例>
 输出为JSON格式：
 {
-  "quote_retweet": "",
+  "quote_retweet1": "",
+  "quote_retweet2": "",
+  "quote_retweet3": "",
 }
 </输出示例>
