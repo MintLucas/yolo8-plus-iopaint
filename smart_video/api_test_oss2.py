@@ -136,7 +136,7 @@ class oss_util:
         # URL处理
         try:
             # 从URL解析文件名和文件后缀
-            file_name = os.path.basename(urlparse(path).path)
+            file_name = os.path.basename(path)
             if not file_name:
                 file_name = "downloaded_file"
             

@@ -79,8 +79,11 @@ class Smart_video_detect(Base_video_class):
                 
                 start_time = time.time()
                 dst_path = "tmp_data/tmp_detect_res/" + file_name + ".mp4"
-                dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
-                
+                if yolo_masked:
+                    dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
+                else:
+                    self.log.info(f"yolo_masked_process_task_id_{material_id} noneed_yolo_masked {yolo_masked}")
+                    return input_path
                 self.redis_client.hset(self.redis_key, material_id, 'processing_state3')
                 end_time = time.time()
                                 
@@ -347,6 +350,9 @@ class Smart_video_detect(Base_video_class):
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fixed_mask = None
         bboxes = process_video_for_watermark(video_path=video_path, model_path=self.sft_yolo, conf = 0.2)
+        if not bboxes:
+            self.log.info(f"{video_path}视频不存在水印")
+            return ""
         dummy_image = np.zeros((height, width, 3), dtype=np.uint8)
         fixed_mask = self.create_mask_yolo_center(dummy_image, [bboxes])
         self.mask_by_yolo_center = fixed_mask

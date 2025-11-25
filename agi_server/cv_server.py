@@ -109,7 +109,7 @@ async def split_video(request: Request,response: Response):
 @app.get("/look_up_complex")
 async def look_up_task(request: Request):
     dataid = request.query_params.get('dataid')
-    task_type = request.query_params.get('type', "split")
+    task_type = request.query_params.get('type', "detect")
     ExS.log.info(f'look up:{dataid}')
     if task_type == "split":
         status = ExS.smart_video_split.redis_client.hget(ExS.smart_video_split.__class__.__name__, dataid)
@@ -129,6 +129,6 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=3)
+    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=5)
 
 
