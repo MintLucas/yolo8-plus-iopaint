@@ -41,11 +41,51 @@
 2、生成转发内容需与原博文内容紧密相关，并符合微博博文内容调性。
 3、需深度学习“跨域星推官”账号历史发布的转发博文信息，以及被转发博文博主所属领域高互动博文特征，来生成内容。
 </核心原则与约束>
-<输出示例>
-输出为JSON格式：
+<输出格式要求>
+必须严格按照以下JSON格式输出：
 {
-  "quote_retweet1": "",
-  "quote_retweet2": "",
-  "quote_retweet3": "",
+  "original_blog_mid": "原始博文的mid",
+  "analysis_summary": {
+    "content_understanding": "在此用1-2句话精炼概括原博文的核心主题、关键信息，说明你对其内容的理解。",
+    "media_analysis": "在这里描述原博文中图片/视频的核心内容、情绪氛围，并说明将如何融入转发文案。如无图片以及视频内容，则写明‘无’。"
+  },
+  "generated_texts":{
+  {
+      "content": "第一条转发文案正文内容，严格控制在150字以内。",
+      "style_breakdown": {
+        "historical_influence": "说明这条文案具体借鉴了‘跨域星推官’历史的哪些风格。",
+        "domain_influence": "说明这条文案借鉴了同领域的哪些高互动技巧。",
+        "media_integration": "说明这条文案是如何结合原博文图片/视频内容的。"
+      },
+      "interaction_analysis": {
+        "propagation_potential": "评估传播潜力，值为‘高’、‘中’、‘低’",
+        "key_engagement_triggers": ["列出1-3个核心互动触发点", "例如：‘情感共鸣’", "例如：‘实用价值’", "例如：‘争议话题’"]
+      }
+    },
+    {
+      "content": "第二条转发文案正文内容，严格控制在150字以内。",
+      "style_breakdown": {
+        "historical_influence": "说明第二条文案的历史风格借鉴点。",
+        "domain_influence": "说明第二条文案的领域风格借鉴点。",
+        "media_integration": "说明第二条文案的图片视频内容融合方式。"
+      },
+      "interaction_analysis": {
+        "propagation_potential": "评估传播潜力",
+        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
+      }
+    },
+    {
+      "content": "第三条转发文案正文内容，严格控制在150字以内。",
+      "style_breakdown": {
+        "historical_influence": "说明第三条文案的历史风格借鉴点。",
+        "domain_influence": "说明第三条文案的领域风格借鉴点。",
+        "media_integration": "说明第三条文案的多媒体内容融合方式。"
+      },
+      "interaction_analysis": {
+        "propagation_potential": "评估传播潜力",
+        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
+      }
+    }
+    }
 }
-</输出示例>
+</输出格式要求>
