@@ -83,6 +83,7 @@ class Smart_video_detect(Base_video_class):
                     dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
                 else:
                     self.log.info(f"yolo_masked_process_task_id_{material_id} noneed_yolo_masked {yolo_masked}")
+                    self.redis_client.hset(self.redis_key, material_id, f'no_need_mask')
                     return input_path
                 self.redis_client.hset(self.redis_key, material_id, 'processing_state3')
                 end_time = time.time()
@@ -106,7 +107,7 @@ class Smart_video_detect(Base_video_class):
                 return sh_url_path
         except Exception as e:
             error_info = traceback.format_exc()
-            self.redis_client.hset(self.redis_key, material_id, f'error:{e}')
+            self.redis_client.hset(self.redis_key, material_id, f'exception')
             self.log.error(f"视频修复异常: {e}\n{error_info}")
             return 0
 
