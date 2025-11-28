@@ -148,12 +148,12 @@ class oss_util:
             image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']
             
             if file_ext in image_extensions:
-                download_dir = os.path.join(tmp_dir, "img")
+                download_dir = os.path.join(tmp_dir, f"mask_img/{file_name[-10:]}")
             elif file_ext in video_extensions:
-                download_dir = os.path.join(tmp_dir, "video")
+                download_dir = os.path.join(tmp_dir, f"mask_video/{file_name[-10:]}")
             else:
                 # 默认下载到tmp_data/video，并添加.mp4后缀
-                download_dir = os.path.join(tmp_dir, "video")
+                download_dir = os.path.join(tmp_dir, f"mask_video/{file_name[-10:]}")
                 file_name += ".mp4"
                 # download_dir = tmp_dir
             

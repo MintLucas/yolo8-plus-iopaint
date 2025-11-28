@@ -46,7 +46,7 @@ class Smart_video_detect(Base_video_class):
         from threading import Lock
         self.lock = Lock()
         from queue import Queue
-        self.queue = Queue(600)
+        self.queue = Queue(1500)
         self.sft_yolo = YOLO(model_path)
         self.sft_yolo.to("cuda")
         self.base_machine_ip = "http://10.78.9.45:"
@@ -102,7 +102,7 @@ class Smart_video_detect(Base_video_class):
                 sh_url_path = self.oss_util.get_url(oss_bucket_object_key)
                 self.log.info(f"video_split_process_task_id_{material_id} detect_url:{sh_url_path}")
                 self.redis_client.hset(self.redis_key, material_id, f'finish_all:{sh_url_path}')
-                self.oss_util.delete_file(local_path)
+                self.oss_util.delete_file(os.path.dirname(local_path))
                 self.oss_util.delete_file(dst_path)
                 return sh_url_path
         except Exception as e:
@@ -280,12 +280,12 @@ class Smart_video_detect(Base_video_class):
         for index,one in enumerate(s1.iter_frames()):
             self.queue.put((index,one))
             if index%100==0:
-                self.log.info(f'put:{index} sm:{freame_num} qusize:{self.queue.qsize()}')
                 per = round(index*100/freame_num,3)
                 per = f'{per}%'
+                self.log.info(f'masking:{per} put_idx:{index} total_frame_num:{freame_num} qusize:{self.queue.qsize()}')
                 self.redis_client.hset(self.redis_key, material_id, f'masking:{per}')
             #print(type(one))
-        self.log.info(f'put:{index} nowid:{material_id} sm:{freame_num} qusize:{self.queue.qsize()}')
+        self.log.info(f'put_idx:{index} nowid:{material_id} total_frame_num:{freame_num} qusize:{self.queue.qsize()}')
         for t in ts:
             t.join()
         self.detect_results= self.detect_results[:index+1]

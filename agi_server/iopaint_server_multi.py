@@ -19,7 +19,7 @@ from typing import List
 # --- 配置区 ---
 # 只需提供GPU的索引号即可
 #起8个服务占用8个G
-DEVICES_INDICES = [0, 0, 2, 2, 2, 2, 2, 2] 
+DEVICES_INDICES = [0, 0, 1, 1, 2, 2, 3, 3] 
 BASE_PORT = 8500
 MODEL = "lama"
 HOST = "0.0.0.0"

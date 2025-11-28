@@ -341,7 +341,7 @@ def vote_for_best_box(detection_results, iou_threshold=0.3):
 
 def process_video_for_watermark(video_path, model_path, frame_rate=2, conf=0.2, device='0'):
     # 调用提取帧的函数
-    frames = extract_frames(video_path, frame_rate, "frames")  # 提取视频帧
+    frames = extract_frames(video_path, frame_rate, os.path.dirname(video_path))  # 提取视频帧
 
     # 检查是否成功提取帧
     if len(frames) == 0:
