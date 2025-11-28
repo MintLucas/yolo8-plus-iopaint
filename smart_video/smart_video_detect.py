@@ -20,7 +20,7 @@ from tqdm import tqdm
 import requests
 import configs
 import numpy as np
-from voting_video2 import process_video_for_watermark
+from voting_video_old import process_video_for_watermark
 from ultralytics import YOLO
 from moviepy.editor import *
 from agi_server.iopaint_server_multi import DEVICES_INDICES,BASE_PORT
@@ -79,7 +79,7 @@ class Smart_video_detect(Base_video_class):
                 
                 start_time = time.time()
                 dst_path = "tmp_data/tmp_detect_res/" + file_name + ".mp4"
-                if yolo_masked:
+                if yolo_masked is not None and (not isinstance(yolo_masked, np.ndarray) or yolo_masked.size > 0):
                     dashcope_res = self.deal_local_fast(vpath = local_path, dst_path = dst_path, material_id=material_id)
                 else:
                     self.log.info(f"yolo_masked_process_task_id_{material_id} noneed_yolo_masked {yolo_masked}")
@@ -351,7 +351,7 @@ class Smart_video_detect(Base_video_class):
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fixed_mask = None
         bboxes = process_video_for_watermark(video_path=video_path, model_path=self.sft_yolo, conf = 0.2)
-        if not bboxes:
+        if bboxes is None or (isinstance(bboxes, np.ndarray) and bboxes.size == 0):
             self.log.info(f"{video_path}视频不存在水印")
             return ""
         dummy_image = np.zeros((height, width, 3), dtype=np.uint8)
@@ -405,7 +405,7 @@ class Smart_video_detect(Base_video_class):
 
 if __name__ == '__main__':
     smart_video_split = Smart_video_detect()
-    test_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/6/51746/2025-09-12/v_187a150723a101760c2d4584172fbe1d.mp4?x-oss-date=20250912T111818Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20250912%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=d177c858922a59d4b05d809130ff5813adba31bcfb515024fa9642bcfb703c57"
-    smart_video_split.dashscope_video_detect(test_url, video_duration=30)
+    test_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/4/59014/2025-09-23/v_cfe37bd91d6af648323ca73f3ffd8a92.mp4?x-oss-date=20251125T092513Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20251125%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=f1bfa194248fd016e8f510c50440cd82d108c5eaf1eda9d64a40b6054c8b5c78"
+    smart_video_split.dashscope_video_detect(test_url)
     sys.exit()
 

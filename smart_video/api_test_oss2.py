@@ -136,7 +136,7 @@ class oss_util:
         # URL处理
         try:
             # 从URL解析文件名和文件后缀
-            file_name = os.path.basename(path)
+            file_name = os.path.basename(path)[-30:]
             if not file_name:
                 file_name = "downloaded_file"
             
@@ -152,8 +152,10 @@ class oss_util:
             elif file_ext in video_extensions:
                 download_dir = os.path.join(tmp_dir, "video")
             else:
-                # 默认下载到tmp_data
-                download_dir = tmp_dir
+                # 默认下载到tmp_data/video，并添加.mp4后缀
+                download_dir = os.path.join(tmp_dir, "video")
+                file_name += ".mp4"
+                # download_dir = tmp_dir
             
             os.makedirs(download_dir, exist_ok=True)
             local_path = os.path.join(download_dir, file_name)
