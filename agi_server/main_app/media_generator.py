@@ -99,7 +99,7 @@ def get_random_style(media_type: str) -> tuple:
 
     # 5. [高风险] 真实/细节风格 (Realistic/Detailed Styles)
     # [我把 Midjourney 风格单独拿出来并做了“安全化”处理]
-    "surreal_detailed": "超现实主义风格（戏剧性构图，光影对比强烈，细节丰富，纹理清晰）",
+    # "surreal_detailed": "超现实主义风格（戏剧性构图，光影对比强烈，细节丰富，纹理清晰）",
     # ^ 删除了 "Midjourney" (品牌词), "8K", "HDR" (技术词)。
         }
     }
