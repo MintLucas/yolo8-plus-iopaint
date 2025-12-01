@@ -385,11 +385,11 @@ def process_video_for_watermark(video_path, model_path, frame_rate=2, conf=0.2, 
                         # 命中后转换为 YOLO 格式，作为 best_box 返回（只返回第一个命中的区域）
                         current_frame_boxes = textbox_to_yolo(text_box, frame_shape)
                         print(f"兜底策略成功！生成 YOLO 格式 current_frame_boxes{current_frame_boxes}")
+                        ocr_detection_results.append(current_frame_boxes)
                         break  # 找到一个即可，无需检查其他角落
                 except Exception as e:
                     print(f"第 {frame_idx} 帧，角落区域 {corner_box} 处理失败：{str(e)}")
                     continue
-            ocr_detection_results.append(current_frame_boxes)
         ocr_detection_results = [[box] for box in ocr_detection_results]
         # 调用聚类函数，从 OCR 检测结果中筛选最优 box
         if any(len(boxes) > 0 for boxes in ocr_detection_results):  # 若有至少一个帧检测到 box
