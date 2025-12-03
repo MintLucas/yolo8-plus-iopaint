@@ -183,10 +183,15 @@ class token_fresh:
         # print(cs)
         return js
 
-    def decode_llm_it_output(self, ans):
-        # jsonpath(js,'$.response_data.choices[0].message.content')[0]
-        messages = ans.get("response_data", {}).get("choices", [{"message": {}}])[0]
-        message = messages.get("message", {"content": ""}).get("content", "")
+    def decode_llm_it_output(self, ans, model_type = ''):
+        import jsonpath
+        # jsonpath(ans,'$.response_data.choices[0].message.content')[0]
+        if 'qwen' in model_type:
+            messages = ans.get("response_data", {}).get('output', {}).get("choices", [{"message": {}}])[0]
+            message = messages.get("message", {"content": ""}).get("content", [{'text':''}])[0].get('text')
+        else:
+            messages = ans.get("response_data", {}).get("choices", [{"message": {}}])[0]
+            message = messages.get("message", {"content": ""}).get("content", "")
         return message
 
     def call_model_google(self, user_prompt, system_prompt, model_type=models_dict["text-gemini"], source="356732087",
@@ -290,11 +295,11 @@ class token_fresh:
         llm_res = ""
         try:
             self.log.info(f"call_model_zp_video :{model_type}\n{llm_res_json}")
-            llm_res = self.decode_llm_it_output(llm_res_json)
+            llm_res = self.decode_llm_it_output(llm_res_json, model_type)
             if not llm_res:
                 llm_res_json = self.call_model_local(params, model_ext, source=source)
                 self.log.info(f"llm_res_none_call_model_zp_video_local :{model_type}\n{llm_res_json}")
-                llm_res = self.decode_llm_it_output(llm_res_json)
+                llm_res = self.decode_llm_it_output(llm_res_json, model_type)
         except:
             self.log.error(f"call_model_zpl_error: input:{llm_res_json}, " + traceback.format_exc())
             print(traceback.format_exc())

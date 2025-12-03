@@ -61,15 +61,26 @@ def text_model_compare():
                     mid_normal = a_p.get_normal_mid(col_value)
                     text = a_p.get_mid_text(mid_normal)
                     new_one_row['原始文案'] = text
-                    llm_res_str = t_f.call_model_google(base_prompt+"/n要转发的博文内容："+text, "")
-                    llm_res_json = ast.literal_eval(llm_res_str.strip("```json").strip("```"))
-                    # llm_res_json = json.loads(llm_res_str)
-                    all_summary_res = llm_res_json['generated_texts']
-                    for i in all_summary_res:
-                        new_one_row[i['style_type']] = i['content']
+                    modes_list = ['text-qwen', 'text-huoshan','text-ds','text-google']
+                    for model_name in modes_list:
+                        try:
+                            if 'google'in model_name :
+                                llm_res_str = t_f.call_model_google(base_prompt+"/n要转发的博文内容："+text, "")
+                            else:
+                                llm_res_str = t_f.call_model_zp(base_prompt+"/n要转发的博文内容："+text, "",model_type=models_dict[model_name])
+                            llm_res_json = ast.literal_eval(llm_res_str.strip("```json").strip("```"))
+                            # llm_res_json = json.loads(llm_res_str)
+                            all_summary_res = llm_res_json['generated_texts']
+                            for i in all_summary_res:
+                                new_one_row[i['style_type']+model_name.split("-")[-1]] = i['content']
+                        except Exception as e:
+                            print("zperror"+str(e))
+                            import traceback
+                            print(traceback.format_exc())
+                            
             new_row_list.append(new_one_row)
         new_dict[col_one] = new_row_list
-    complex_dict_to_excel('tmp.xlsx', new_dict)
+    complex_dict_to_excel('summary_model_compare.xlsx', new_dict)
             
     
     
