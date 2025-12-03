@@ -41,77 +41,27 @@
 <输出格式要求>
 必须严格按照以下JSON格式输出：
 {
-  "original_blog_mid": "原始博文的mid",
-  "analysis_summary": {
-    "content_understanding": "在此用1-2句话精炼概括原博文的核心主题、关键信息，说明你对其内容的理解。",
-    "media_analysis": "在这里描述原博文中图片/视频的核心内容、情绪氛围，并说明将如何融入转发文案。如无图片以及视频内容，则写明‘无’。"
-  },
   "generated_texts":{
   {
       "style_type":"自然型"，
-      "content": "第一条转发文案正文内容，严格控制在150字以内。",
-      "style_breakdown": {
-        "historical_influence": "说明这条文案具体如何借鉴了‘跨域星推官’历史博文调性。",
-        "domain_influence": "说明这条文案借鉴了同领域的哪些高互动技巧。",
-        "media_integration": "说明这条文案是如何结合原博文图片/视频内容的。"
-      },
-      "interaction_analysis": {
-        "propagation_potential": "评估传播潜力，值为‘高’、‘中’、‘低’",
-        "key_engagement_triggers": ["列出1-3个核心互动触发点", "例如：‘情感共鸣’", "例如：‘实用价值’", "例如：‘争议话题’"]
-      }
+      "content": "第一条转发文案正文内容，严格控制在150字以内。"
     },
     {
       "style_type":"温暖型"，
-      "content": "第二条转发文案正文内容，严格控制在150字以内。",
-      "style_breakdown": {
-        "historical_influence": "说明第二条文案具历史博文调性借鉴点。",
-        "domain_influence": "说明第二条文案的领域风格借鉴点。",
-        "media_integration": "说明第二条文案的图片视频内容融合方式。"
-      },
-      "interaction_analysis": {
-        "propagation_potential": "评估传播潜力",
-        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
-      }
+      "content": "第二条转发文案正文内容，严格控制在150字以内。"
     },
     {
       "style_type":"幽默型"，
-      "content": "第三条转发文案正文内容，严格控制在150字以内。",
-      "style_breakdown": {
-        "historical_influence": "说明第三条文案具历史博文调性借鉴点。",
-        "domain_influence": "说明第三条文案的领域风格借鉴点。",
-        "media_integration": "说明第三条文案的多媒体内容融合方式。"
-      },
-      "interaction_analysis": {
-        "propagation_potential": "评估传播潜力",
-        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
-      }
+      "content": "第三条转发文案正文内容，严格控制在150字以内。"
     }
     {
       "style_type":"文艺型"，
-      "content": "第四条转发文案正文内容，严格控制在150字以内。",
-      "style_breakdown": {
-        "historical_influence": "说明第四条文案的历史风格借鉴点。",
-        "domain_influence": "说明第四条文案的领域风格借鉴点。",
-        "media_integration": "说明第四条文案的多媒体内容融合方式。"
-      },
-      "interaction_analysis": {
-        "propagation_potential": "评估传播潜力",
-        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
-      }
+      "content": "第四条转发文案正文内容，严格控制在150字以内。"
     }
     {
       "style_type":"正式型"，
-      "content": "第五条转发文案正文内容，严格控制在150字以内。",
-      "style_breakdown": {
-        "historical_influence": "说明第五条文案的历史风格借鉴点。",
-        "domain_influence": "说明第五条文案的领域风格借鉴点。",
-        "media_integration": "说明第五条文案的多媒体内容融合方式。"
-      },
-      "interaction_analysis": {
-        "propagation_potential": "评估传播潜力",
-        "key_engagement_triggers": ["列出1-3个核心互动触发点"]
-      }
+      "content": "第五条转发文案正文内容，严格控制在150字以内。"
     }
-    }
+  }
 }
 </输出格式要求>

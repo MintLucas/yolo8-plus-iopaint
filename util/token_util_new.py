@@ -54,7 +54,8 @@ models_dict = {"video-huoshan": "volcengine:Doubao-Seedance-1.0-pro-250528",
                "image": "volcengine:Doubao-Seedream-4.0-250828",
                "text-huoshan": "volcengine:Doubao-Seed-1.6-flash",
                "text-ds": "volcengine:DeepSeek-V3-250324",
-               "text-gemini": "google-cloud:gemini-2.0-flash"}
+               "text-gemini": "google-cloud:gemini-2.0-flash",
+               "text-qwen": "dashscope:qwen-vl-max"}
 video_prompt_test = "生成一段 10 秒健身教学视频，分镜节奏如下：0-3 秒用文字标题 + 运动场景快速引入，呈现‘夏天练出薄肌身材’的主题；3-7 秒展示居家训练场景（如空地），搭配画外音说明‘无需去健身房，在家即可训练’；7-10 秒特写演示欢聚俯卧撑动作，突出胸部发力细节，字幕标注‘每天 50-100 个，练胸关键动作’。整体画面简洁，节奏紧凑，以实用训练指导为主，结尾可快速闪过‘坚持即见效’的提示文字 --ratio 16:9 --duration 10"
 video_duration = "--duration 10"
 test_video_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cph/yt_dlp/3/97073/2025-09-05/v_d2276be08d62e0fea72d5fe4384f2dc4.mp4?x-oss-date=20250905T025501Z&x-oss-expires=604800&x-oss-signature-version=OSS4-HMAC-SHA256&x-oss-credential=LTAI5tHj9VxWxHdfk1rWYrdj%2F20250905%2Fcn-beijing%2Foss%2Faliyun_v4_request&x-oss-signature=d5b3955f92dc1296d8094146fbdfd110e47b367dba41ba8ff683f4491b41334a"
@@ -112,7 +113,12 @@ class token_fresh:
             d['stream'] = 'true'
         # print(parm)
         # d= {'qu':'oj','stream':'true','param':{'message': '猪八戒是个什么样的人？请你模仿他的口吻说几句话', 'appkey': '356732087', 'type': 'dashscope', 'model_id': 'deepseek-v3','smart_schedule':'1'},'direct':1}
+        if 'dashscope' in parm.get("type", ""):
+            d['api_ext'] = {
+        "request_compatible_mode": "dashscope"
+    }
         d['model_ext'] = model_ext
+
         cs = None
         js = {}
 
@@ -183,7 +189,7 @@ class token_fresh:
         message = messages.get("message", {"content": ""}).get("content", "")
         return message
 
-    def call_model_google(self, user_prompt, system_prompt, model_type=models_dict["text-ds"], source="356732087",
+    def call_model_google(self, user_prompt, system_prompt, model_type=models_dict["text-gemini"], source="356732087",
                       data={}):
         from jsonpath import jsonpath
         if not user_prompt and not system_prompt:
@@ -245,6 +251,7 @@ class token_fresh:
         if not user_prompt and not system_prompt:
             return ""
         # 线上使用
+        
         model_ext = {
             "model_ext": {
                 # 'disable_analysis': True,
@@ -255,15 +262,28 @@ class token_fresh:
                 ]
             }
         }
+        if 'qwen' in model_type:
+            model_ext = {"model_ext":{
+                    "model": 'qwen-vl-max',
+                    "input": {
+                        # 'disable_analysis': True,
+                        "temperature": 0.8,
+                        "messages": [
+                            {"role": "user", "content": user_prompt}
+                        ]
+                    }
+                }}
         if user_prompt_media:
             model_ext['model_ext']['messages'].append({"role": "user", "content": user_prompt_media})
+        
         utype, model_id = model_type.split(":")
         params = {
             'model_id': model_id,
             'appkey': source,
             'type': utype,
             'use_ext_first': '1',
-            'message': 'none'
+            'message': 'no_use',
+            'smart_schedule':'1'
         }
 
         llm_res_json = self.call_model(params, model_ext, source=source)
@@ -650,7 +670,6 @@ def test_video(tf, prompt="落霞与孤鹜齐飞，秋水共长天一色", model
     save_path = tf.query_video_task_status(video_id.get("response_data", {}).get("id", "cgt-20250724193620-njqsn"))
     print(save_path)
 
-
 if __name__ == '__main__':
     tf = token_fresh()
     # user_prompt = """
@@ -672,8 +691,8 @@ if __name__ == '__main__':
     model_test = ["volcengine:DeepSeek-V3-250324", "weibo:deepseek-r1", "dashscope:deepseek-r1",
                   "volcengine:DeepSeek-R1-250528",models_dict['text-gemini']]
     source = "116913455"
-    res1 = tf.call_model_google(user_prompt, "", model_test[-1])
-    res2 = tf.call_model_zp(user_prompt, "", model_test[0], source)
+    # res1 = tf.call_model_google(user_prompt, "", model_test[-1])
+    res2 = tf.call_model_zp(user_prompt, "", models_dict['text-qwen'])
     import datetime
 
     next_month = datetime.datetime.now() + datetime.timedelta(month_clu=1)

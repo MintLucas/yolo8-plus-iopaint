@@ -144,4 +144,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='cat_main_server:app', host='0.0.0.0', port=14546, workers=1)
+    uvicorn.run(app='cat_main_server:app', host='0.0.0.0', port=14546, workers=5)

@@ -11,13 +11,16 @@ import json
 from util.mylogging import get_logger
 import requests
 from util.token_util_new import token_fresh, models_dict
+from util.api_client_new import Api_client
+from util.url_util import url_to_base64
 class Cat_Server_help:
     def __init__(self, log = get_logger("server_log/Cat_Server_help")):
         self.log = log
         self.session = requests.session()
         self.tf = token_fresh()
-        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v2.md"
-        self.supply_key = ["blog_text","blog_img", "blog_video", "user_info", "history_blog", "reference_blog"]
+        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v2_mode0.md"
+        self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog"]
+        self.show__batch_server = Api_client(session=self.session)
     def sync_llm_result_post(self, task_id, text_content):
         # 正式地址
         url = 'http://i.answer.media.weibo.com/admin/task/receivetext'
@@ -58,8 +61,15 @@ class Cat_Server_help:
         """
         supply_dict = {key:value for key,value in para_dict.items() if key in self.supply_key}
         # base_prompt = base_prompt.format(**para_dict)
-        
-        result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"])
+        if para_dict['blog_img']:
+            use_medias = []
+            for one_url in para_dict['blog_img']:
+                if "http" in one_url:
+                    b64_img = url_to_base64(one_url)
+                    use_medias.append({'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{b64_img}'}})
+            result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
+        else:
+            result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"])
         if not result:
             res = {}
         else:
@@ -68,4 +78,5 @@ class Cat_Server_help:
     
 if __name__ == '__main__':
     server_help = Cat_Server_help()
+    header = server_help.tf.get_token()
     sys.exit()
