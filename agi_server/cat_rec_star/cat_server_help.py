@@ -52,7 +52,7 @@ class Cat_Server_help:
     def run(self, para_dict):
         with open(self.prompt_path, encoding='utf-8') as f:
             base_prompt = f.read()
-
+        # base_prompt = '请按时间描述一下视频内容'
         """
         1. 当前博文内容：筛选出的优质原创博文，即为你需要转发的原博文内容。
 2. 当前博文博主信息：需要转发的原博文博主信息，主要包括领域，昵称。
@@ -61,12 +61,15 @@ class Cat_Server_help:
         """
         supply_dict = {key:value for key,value in para_dict.items() if key in self.supply_key}
         # base_prompt = base_prompt.format(**para_dict)
-        if para_dict['blog_img']:
-            use_medias = []
+        use_medias = []
+        if para_dict['blog_img'] or para_dict['blog_video']:
             for one_url in para_dict['blog_img']:
                 if "http" in one_url:
                     b64_img = url_to_base64(one_url)
                     use_medias.append({'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{b64_img}'}})
+            if para_dict['blog_video']:
+                for one_url in para_dict['blog_video']:
+                    use_medias.append({'type': 'video_url', 'video_url': {'url': one_url}})
             result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
         else:
             result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"])
