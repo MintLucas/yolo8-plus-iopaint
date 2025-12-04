@@ -62,7 +62,7 @@ def get_random_style(media_type: str) -> tuple:
 }
     style_maps = {
         MEDIA_TYPE_IMAGE: {
-            "ukiyoe": "日式浮世绘（木版画质感，色彩浓郁饱和，线条简洁有力）",
+            "ukiyoe": "木版画质，色彩浓郁饱和，线条简洁有力",
             "ink_style": "水墨国风（以黑白为主，少量色彩点缀，留白充足，意境悠远）",
             "pixel_art": "像素风（画面边缘有轻微像素锯齿，1990年代红白机游戏画面质感）",
             "us_cartoon": "美式卡通（色彩鲜艳饱和，线条粗黑圆润，阴影是纯色块）",
@@ -72,7 +72,17 @@ def get_random_style(media_type: str) -> tuple:
             "midjourney_style": "Midjourney风格（超现实构图，1K，HDR效果，细节丰富）",
             "forest_fairy": "森系童话风格（色彩明快柔和，边缘虚化，儿童绘本插画质感，1K）",
             "retro_hongkong": "复古港风（暖黄色胶片颗粒，轻微褪色效果，16:9电影画幅，无文字）",
-            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，1K）"
+            "impressionist_monet": "印象派莫奈风格（笔触松散细碎，色彩通透，油画质感，1K）",
+            # 黏土动画风格：突出手工感与童趣
+            "clay_animation": "黏土动画风格，画面带轻微'手工捏制'的不规则边缘，童趣感",
+            # 国风工笔风格：强调宣纸背景与工笔质感
+            "chinese_meticulous": "国风工笔风格，背景是米白色宣纸，画面线条工整，色彩浓艳却雅致，工笔重彩质感",
+            # 梦幻水彩风格：核心是晕染与柔和光影
+            "dreamy_watercolor": "梦幻水彩风格，画面晕染效果明显，色彩通透，无清晰轮廓，柔和光影",
+            # 黑白漫画风格：关键为锐利线条与网点纸阴影
+            "black_white_comic": "黑白漫画风格，线条锐利，阴影用网点纸效果，色彩明快",
+            # 卡通3D立体风格：重点是圆润造型与活泼氛围
+            "cartoon_3d": "卡通3d立体风格，造型圆润可爱，颜色鲜亮，年轻活泼氛围"
         },
         MEDIA_TYPE_VIDEO: {
 # 1. 绘画/艺术媒介 (Painting/Art Mediums)
