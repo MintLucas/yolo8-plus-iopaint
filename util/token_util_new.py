@@ -294,12 +294,12 @@ class token_fresh:
         llm_res_json = self.call_model(params, model_ext, source=source)
         llm_res = ""
         try:
-            self.log.info(f"call_model_zp_video :{model_type}\n{llm_res_json}")
             llm_res = self.decode_llm_it_output(llm_res_json, model_type)
             if not llm_res:
                 llm_res_json = self.call_model_local(params, model_ext, source=source)
-                self.log.info(f"llm_res_none_call_model_zp_video_local :{model_type}\n{llm_res_json}")
+                self.log.info(f"llm_res_none_call_model_zp_log_local :{model_type}\n{llm_res_json}")
                 llm_res = self.decode_llm_it_output(llm_res_json, model_type)
+            self.log.info(f"call_model_zp_log :{model_type}\n{llm_res_json}")
         except:
             self.log.error(f"call_model_zpl_error: input:{llm_res_json}, " + traceback.format_exc())
             print(traceback.format_exc())

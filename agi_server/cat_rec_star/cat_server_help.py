@@ -18,7 +18,7 @@ class Cat_Server_help:
         self.log = log
         self.session = requests.session()
         self.tf = token_fresh()
-        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v2_mode0.md"
+        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v4_mode0.md"
         self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog"]
         self.show__batch_server = Api_client(session=self.session)
     def sync_llm_result_post(self, task_id, text_content):
