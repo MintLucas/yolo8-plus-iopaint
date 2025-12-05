@@ -13,14 +13,15 @@ import requests
 from util.token_util_new import token_fresh, models_dict
 from util.api_client_new import Api_client
 from util.url_util import url_to_base64
+from agi_server.cat_rec_star.model_config import Model_config
 class Cat_Server_help:
     def __init__(self, log = get_logger("server_log/Cat_Server_help")):
         self.log = log
         self.session = requests.session()
         self.tf = token_fresh()
-        self.prompt_path = "config/prompt/cat_rec_star/create_blog_v4_mode0.md"
         self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog"]
         self.show__batch_server = Api_client(session=self.session)
+        self.model_config = Model_config(self.log)
     def sync_llm_result_post(self, task_id, text_content):
         # 正式地址
         url = 'http://i.answer.media.weibo.com/admin/task/receivetext'
@@ -50,8 +51,9 @@ class Cat_Server_help:
         return "success" if response_content else "failed"  # 优化返回值，体现实际同步状态
 
     def run(self, para_dict):
-        with open(self.prompt_path, encoding='utf-8') as f:
-            base_prompt = f.read()
+        author_uid = para_dict.get("uid", "6679129087")
+        base_prompt = self.model_config.get(author_uid)
+
         # base_prompt = '请按时间描述一下视频内容'
         """
         1. 当前博文内容：筛选出的优质原创博文，即为你需要转发的原博文内容。
@@ -70,9 +72,9 @@ class Cat_Server_help:
             if para_dict['blog_video']:
                 for one_url in para_dict['blog_video']:
                     use_medias.append({'type': 'video_url', 'video_url': {'url': one_url}})
-            result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
+            result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
         else:
-            result = self.tf.call_model_zp(json.dumps(para_dict), base_prompt, models_dict["text-huoshan"])
+            result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"])
         if not result:
             res = {}
         else:

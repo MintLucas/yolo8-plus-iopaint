@@ -179,7 +179,7 @@ class token_fresh:
                 er_msg = traceback.format_exc()
                 self.log.error(f'err call model:{cs} {er_msg}')
         end = time.time()
-        self.log.info(f'model call spend:{end - begin}')
+        # self.log.info(f'model call spend:{end - begin}')
         # print(cs)
         return js
 
@@ -256,7 +256,7 @@ class token_fresh:
         if not user_prompt and not system_prompt:
             return ""
         # 线上使用
-        
+        begin = time.time()
         model_ext = {
             "model_ext": {
                 # 'disable_analysis': True,
@@ -297,12 +297,14 @@ class token_fresh:
             llm_res = self.decode_llm_it_output(llm_res_json, model_type)
             if not llm_res:
                 llm_res_json = self.call_model_local(params, model_ext, source=source)
-                self.log.info(f"llm_res_none_call_model_zp_log_local :{model_type}\n{llm_res_json}")
+                # self.log.info(f"llm_res_none_call_model_zp_log_local :{model_type}\n{llm_res_json}")
                 llm_res = self.decode_llm_it_output(llm_res_json, model_type)
             self.log.info(f"call_model_zp_log :{model_type}\n{llm_res_json}")
         except:
             self.log.error(f"call_model_zpl_error: input:{llm_res_json}, " + traceback.format_exc())
             print(traceback.format_exc())
+        end = time.time()
+        self.log.info(f'model call spend:{end - begin}')
         return llm_res
 
     def call_model_zp_img(self, user_prompt="一只可爱的猫猫拿起桌上的一只毛球", system_prompt="",
