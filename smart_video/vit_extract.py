@@ -3,12 +3,13 @@ import torch
 from transformers import CLIPProcessor, CLIPModel
 from scipy.spatial.distance import cosine
 import numpy as np
-
+#默认在~/.cache/huggingface/hub
+custom_cache_dir = "/workspace/work/zhipeng16/yolo8-plus-iopaint/models/"
 # 步骤 1: 加载预训练的 CLIP 模型和处理器
 # 使用 "openai/clip-vit-base-patch32" 是一个不错的选择，性能和速度均衡
 model_name = "openai/clip-vit-base-patch32"
-model = CLIPModel.from_pretrained(model_name)
-processor = CLIPProcessor.from_pretrained(model_name)
+model = CLIPModel.from_pretrained(model_name,cache_dir=custom_cache_dir)
+processor = CLIPProcessor.from_pretrained(model_name,cache_dir=custom_cache_dir)
 
 # 检查是否有可用的GPU，并把模型移动到GPU上
 device = "cuda" if torch.cuda.is_available() else "cpu"
