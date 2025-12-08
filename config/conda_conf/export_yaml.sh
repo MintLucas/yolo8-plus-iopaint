@@ -11,10 +11,6 @@ else
     ENV_NAME=$1
 fi
 
-# 确保 conda 可用
-CONDA_BASE="/workspace/work/moniforge3"
-[ -f "$CONDA_BASE/etc/profile.d/conda.sh" ] && source "$CONDA_BASE/etc/profile.d/conda.sh"
-
 OUTPUT_FILE="${ENV_NAME}.yaml"
 
 echo "正在导出环境 ${ENV_NAME} 的配置..."
