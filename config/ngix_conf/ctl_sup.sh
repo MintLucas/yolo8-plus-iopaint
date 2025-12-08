@@ -1,0 +1,1 @@
+/workspace/work/jiangtao16/miniforge3/envs/zhipeng16_cv/bin/python /workspace/work/jiangtao16/miniforge3/envs/zhipeng16_cv/bin/supervisorctl -c /workspace/work/zhipeng16/yolo8-plus-iopaint/config/sup_conf/supervisord.conf $1
