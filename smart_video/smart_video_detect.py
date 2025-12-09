@@ -50,6 +50,7 @@ class Smart_video_detect(Base_video_class):
         self.sft_yolo = YOLO(model_path)
         self.sft_yolo.to("cuda")
         self.base_machine_ip = "http://10.78.9.45:"
+        self.base_machine_ip = "http://ip1.push.weibo.cn:"
         self.lama_inpaints = {
             #: [model,status,sum_fps,mask_local,video_path,deal_index]
             0:self.base_machine_ip+"8500",
@@ -58,6 +59,7 @@ class Smart_video_detect(Base_video_class):
             3:self.base_machine_ip+"8503"
         }
         self.lama_inpaints = {k:self.base_machine_ip+str(BASE_PORT+k) for k in range(len(DEVICES_INDICES))}
+        self.lama_inpaints = {k:self.base_machine_ip+str(BASE_PORT) for k in range(len(DEVICES_INDICES))}
         self.log.info(f"一共起了{len(DEVICES_INDICES)}个服务, 卡分布{DEVICES_INDICES}, 服务ip: {self.base_machine_ip+str(BASE_PORT)}")
     def dashscope_video_detect(self, input_path = "",  material_id = "zhipeng16_test"):
         """
