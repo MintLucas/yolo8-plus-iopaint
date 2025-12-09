@@ -18,7 +18,7 @@ class Cat_Server_help:
     def __init__(self, log = get_logger("server_log/Cat_Server_help")):
         self.log = log
         self.session = requests.session()
-        self.tf = token_fresh()
+        self.tf = token_fresh(get_logger("llm_log/Cat_Server_help"))
         self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog"]
         self.show__batch_server = Api_client(session=self.session)
         self.model_config = Model_config(self.log)

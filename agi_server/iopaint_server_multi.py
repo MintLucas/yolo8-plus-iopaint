@@ -10,7 +10,7 @@ import sys,os
 sys.path.append(os.getcwd())
 sys.path.append("/workspace/work/zhipeng16/yolo8-plus-iopaint")
 from util.mylogging import get_logger
-logging = get_logger("iopaint_server_multi")
+logging = get_logger("cv_server/iopaint_server_multi")
 import subprocess
 import threading
 import time
