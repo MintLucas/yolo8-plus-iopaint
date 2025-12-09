@@ -114,14 +114,15 @@ async def look_up_task(request: Request):
     if task_type == "split":
         status = ExS.smart_video_split.redis_client.hget(ExS.smart_video_split.__class__.__name__, dataid)
     else:
-        ExS.smart_video_detect.check_task_status(dataid)
+        if request.query_params.get('mode') == '0':
+            ExS.smart_video_detect.check_task_status(dataid)
         status = ExS.smart_video_detect.redis_client.hget(ExS.smart_video_detect.__class__.__name__,dataid)
     end = {'code':0,'status':status}
     return end
 
 from util import mylogging
 
-logger = mylogging.get_logger('CVServer')
+logger = mylogging.get_logger('server_log/cv_server')
 ExS = CVServer(logger)
 
 if __name__ == '__main__':
@@ -129,6 +130,6 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=5)
+    uvicorn.run(app='cv_server:app', host='0.0.0.0', port=2222, workers=3)
 
 

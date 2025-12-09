@@ -16,12 +16,12 @@ from smart_video.base_video_class import Base_video_class
 from smart_video.test_video_segments import filter_and_combine_video_segments
 
 class Smart_video_split(Base_video_class):
-    def __init__(self, log=get_logger("smart_video_split")):
+    def __init__(self, log=get_logger("server_log/smart_video_split")):
         self.log = log
         super().__init__(self.log)
         self.redis_key = self.__class__.__name__
         self.oss_util = oss_util(self.log)
-        self.token_fresh = token_fresh()
+        self.token_fresh = token_fresh(get_logger("llm_log/smart_video_split"))
         from threading import Lock
         self.lock = Lock()
 

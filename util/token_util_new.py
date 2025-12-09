@@ -62,7 +62,7 @@ test_video_url = "https://wb-channel-aiclip-media.oss-cn-beijing.aliyuncs.com/cp
 
 
 class token_fresh:
-    def __init__(self, log=mylogging.get_logger("token_util_new"), session=requests.session()):
+    def __init__(self, log=mylogging.get_logger("llm_log/token_util_new"), session=requests.session()):
         self.log = log
         self.session = session
         self.last_fresh_time = time.time()

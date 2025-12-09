@@ -27,8 +27,6 @@ import json
 import sys
 import os
 sys.path.append(os.getcwd())
-from video_generator import process_api_questions_generate_videos  # 导入核心生成函数
-from picture_generator import process_api_questions_generate_pictures  # 导入API定义
 from media_generator import process_api_questions_generate_media
 from util.fast_api_middleware_logging import LogRequestsMiddleware
 from agi_server.main_app.server_help import Server_Help
@@ -44,7 +42,7 @@ server_help = Server_Help()
 
 from util.token_util_new import token_fresh, models_dict  # 导入模型工具
 from util.oss_util import oss_util  # 导入模型调用工具类
-
+from util.mylogging import get_logger
 # 1. 初始化FastAPI应用
 app = FastAPI(
     title="问题-视频路径生成API",
@@ -80,7 +78,7 @@ class ApiResponse(BaseModel):
     result: str
     task_id: str  # 改为字符串类型，用uuid生成唯一ID
 
-tf = token_fresh()  # 初始化token工具
+tf = token_fresh(get_logger('llm_log/question_server_help'))  # 初始化token工具
 VIDEO_MODEL_TYPE = models_dict["video-huoshan"]  # 视频模型类型（与video_generator一致）
 TASK_RECORD: Dict[str, Dict] = {}  # 存储任务状态，方便测试时查询
 
@@ -179,4 +177,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='question_video_api_server:app', host='0.0.0.0', port=14545, workers=5)
+    uvicorn.run(app='question_video_api_server:app', host='0.0.0.0', port=14545, workers=3)

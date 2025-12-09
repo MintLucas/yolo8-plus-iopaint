@@ -36,12 +36,12 @@ cache_dir = f"{project_dir}/.cache"
 model_path = f"{project_dir}/models/last.pt"
 
 class Smart_video_detect(Base_video_class):
-    def __init__(self, log=get_logger("smart_video_detect")):
+    def __init__(self, log=get_logger("server_log/smart_video_detect")):
         self.log = log
         super().__init__(self.log)
         self.redis_key = self.__class__.__name__
         self.oss_util = oss_util(self.log)
-        self.token_fresh = token_fresh()
+        self.token_fresh = token_fresh(get_logger("llm_log/smart_video_detect"))
         self.task_status = {}
         from threading import Lock
         self.lock = Lock()
@@ -49,7 +49,7 @@ class Smart_video_detect(Base_video_class):
         self.queue = Queue(1500)
         self.sft_yolo = YOLO(model_path)
         self.sft_yolo.to("cuda")
-        self.base_machine_ip = "http://10.78.9.45:"
+        self.base_machine_ip = "http://ip1.push.weibo.cn:"
         self.lama_inpaints = {
             #: [model,status,sum_fps,mask_local,video_path,deal_index]
             0:self.base_machine_ip+"8500",
@@ -392,7 +392,7 @@ class Smart_video_detect(Base_video_class):
         video_input = source_input.get("uploaded_video_url", "")
         split_num = source_input.get("split_num", 2)
         part_time = source_input.get("part_time", 45)
-        mode = source_input.get("mode", 0)
+        mode = source_input.get("mode", 1)
         video_duration = source_input.get("video_duration", 167)
         task_id = source_input.get("material_id", "zhipeng_test")
         if mode == 1:

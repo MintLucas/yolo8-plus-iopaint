@@ -92,18 +92,17 @@ def get_logger(file_name):
     log_path = './log'
     if 'RESULT_DIR' in os.environ:
         log_path = '%s/log' % os.environ['RESULT_DIR']
-
-    # 如果日志目录不存在，则创建
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-
         # 1. 创建普通日志处理器，用于记录 INFO 和 WARNING，不记录 ERROR
     log_file_path = os.path.join(log_path, f"{file_name}.log")
+    log_dir = os.path.dirname(log_file_path)
+    
+    os.makedirs(log_dir, exist_ok=True)
+    
     log_file_handler = RotatingFileHandler(
         filename=log_file_path,
         mode='a',
-        maxBytes=1024 * 1024 * 500,
-        backupCount=6
+        maxBytes=1024 * 1024 * 100,
+        backupCount=3
     )
     log_file_handler.setFormatter(formatter)
     # 核心改动：添加一个 lambda 过滤器来排除 ERROR 级别的日志
@@ -114,8 +113,8 @@ def get_logger(file_name):
     error_file_handler = RotatingFileHandler(
         filename=error_file_path,
         mode='a',
-        maxBytes=1024 * 1024 * 500,
-        backupCount=6
+        maxBytes=1024 * 1024 * 100,
+        backupCount=1
     )
     error_file_handler.setFormatter(formatter)
     error_file_handler.setLevel(logging.ERROR)
@@ -229,3 +228,6 @@ def get_md_logger(file_name):
     logger.addHandler(file_handler)
 
     return logger
+
+if __name__ == "__main__":
+    get_logger('server_log/cat_server_log')
