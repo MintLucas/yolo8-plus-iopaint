@@ -15,9 +15,6 @@ else
 fi
 
 # 2. 确保 conda 可用
-CONDA_BASE="/workspace/work/moniforge3"
-[ -f "$CONDA_BASE/etc/profile.d/conda.sh" ] && source "$CONDA_BASE/etc/profile.d/conda.sh"
-
 echo -e "准备创建环境: ${GREEN}$ENV_NAME${NC} (Python $PY_VER)"
 
 # 3. 创建环境
