@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-########################################################################
-#
-# Copyright (c) 2025 sina.com.cn, Inc. All Rights Reserved
-#
-########################################################################
-"""
-File: asr_粗切.py
-Author: yining8(yining8@staff.sina.com.cn)
-Date: 2025/09/11 18:25:05
-"""
+# @Time    : 2025/12/10 17:36
+# @Author  : zhipeng16
+# @Email   : zzzp50@ustc.edu
+# @File    : asr_cut.py
+# @Usage   : Describe the file's purpose
 import os, re
 from funasr import AutoModel
 import subprocess
@@ -67,11 +62,14 @@ def asr_collect_split_para(asr_text, asr_raw_text, asr_punc_array, asr_timestamp
                 dur_end = asr_timestamp[i][1]
                 tmp_dic = {
                         "text": para,
-                        "start_ms": dur_start,
-                        "end_ms": dur_end,
+                        "beginTime": round(dur_start/1000, 2),
+                        "endTime": round(dur_end/1000, 2),
                         "start_str": asr_ms_to_hmsms(dur_start),
                         "end_str": asr_ms_to_hmsms(dur_end),
-                        "duration": dur_end - dur_start
+                        "duration": dur_end - dur_start,
+                        "theme": "",
+                        "type": "Semantic",
+                        "by": "model1"
                         }
                 para_list.append(tmp_dic)
                 para = ""
@@ -86,12 +84,15 @@ asr_model = AutoModel(
     model=cur_dir+asr_model_id,   # 逐字转录
     vad_model=cur_dir+"speech_fsmn_vad_zh-cn-16k-common-pytorch", # VAD用来切静音
     punc_model=cur_dir+"ct-punc", # 加标点
-    device="cuda"
+    device="cuda",
+    disable_update=True
     )
 
 video_url = "https://aiclipcdn.weibo.com/ai_media/temp/c1cb62a72c364ecfb7f695fde0d7fd4d_iUBYcPYQlx08nuw3XGWQ01041200nGSB0E010.mp4"
 print(f'video_url: {video_url}')
 video_path = download_video(video_url, save_path=cur_dir+"FunASR_part/data")
+video_path = '/workspace/work/zhipeng16/datasets/videos/4分钟游戏教学视频.mp4'
+video_path = '/workspace/work/zhipeng16/datasets/videos/3分钟游戏集锦.mp4'
 print(f'video_path: {video_path}')
 video_name = video_url.split('/')[-1].split('.')[0]
 wav_path = os.path.splitext(video_path)[0]+".wav"
@@ -109,5 +110,6 @@ asr_raw_text = [x for x in asr_raw_text if len(x)!=0]
 asr_timestamp = asr_result["timestamp"]
 asr_punc_array = asr_result["punc_array"] # 1不需要切分，2逗号，3切分，4一定要切分
 para_list = asr_collect_split_para(asr_text, asr_raw_text, asr_punc_array, asr_timestamp) # 切分整合段落
+print(para_list)
 for dic in para_list:
     print(dic)

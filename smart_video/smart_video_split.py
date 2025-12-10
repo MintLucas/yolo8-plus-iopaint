@@ -14,6 +14,7 @@ from util.token_util_new import token_fresh
 import traceback,time,random,redis
 from smart_video.base_video_class import Base_video_class
 from smart_video.test_video_segments import filter_and_combine_video_segments
+from smart_video.pipeline_video_split_v2 import SmartVideoCutter
 
 class Smart_video_split(Base_video_class):
     def __init__(self, log=get_logger("server_log/smart_video_split")):
@@ -22,6 +23,7 @@ class Smart_video_split(Base_video_class):
         self.redis_key = self.__class__.__name__
         self.oss_util = oss_util(self.log)
         self.token_fresh = token_fresh(get_logger("llm_log/smart_video_split"))
+        self.pipeline_video_split = SmartVideoCutter()
         from threading import Lock
         self.lock = Lock()
 
@@ -69,6 +71,52 @@ class Smart_video_split(Base_video_class):
             self.log.error(f"视频切割异常: {e}\n{error_info}")
             return 0
 
+    def pipeline_video_split_process(self, input_path: str, split_num: int = 2, part_time: int = 45, mode: str = 'auto', video_duration:int = 167, material_id = "zhipeng_test"):
+        """
+        智能视频切分函数。
+
+        Args:
+            video_input (str): 视频路径，可以是本地路径或URL。
+            split_num (int, optional): 期望的拆分段数。
+            part_time (int, optional): 每段视频的期望时长（秒）。
+            mode (str, optional): 处理模式。
+
+        Returns:
+            dict: 包含视频切分结果的字典，如果处理失败则返回None。
+        """
+
+        material_id = str(material_id)
+        self.log.info(f"start_process_task_id_{material_id}")
+        self.redis_client.hset(self.redis_key, material_id, 'waiting')
+        self.redis_client.hset(self.redis_key, material_id, 'downloading')
+        self.log.info(f"downloading_process_task_id_{material_id}")
+        local_path,file_name = self.oss_util.check_video_path(input_path)
+        try:
+            with self.lock:
+
+                self.redis_client.hset(self.redis_key, material_id, 'processing_state1')
+                start_time = time.time()
+                pipeline_res = self.pipeline_video_split.process( input_path=local_path,
+        split_num=split_num,           # 期望至少保留x段
+        part_time=part_time,          # 期望每段不超过x秒
+        video_duration=video_duration,    
+        material_id=material_id, mode = mode)
+                end_time = time.time()
+                elapsed_time_seconds = end_time -start_time
+                elapsed_minutes = int(elapsed_time_seconds // 60)
+                elapsed_seconds = int(elapsed_time_seconds % 60)
+                # 打印运行时间
+                self.log.info(f"dash_split运行时间: {elapsed_minutes} 分钟 {elapsed_seconds} 秒")
+                dashcope_video_split_list = filter_and_combine_video_segments(pipeline_res, split_num, part_time)
+                self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(dashcope_video_split_list, ensure_ascii=False)}')
+                self.oss_util.delete_file(local_path)
+                return dashcope_video_split_list
+
+        except Exception as e:
+            self.log.error(f"处理过程中发生错误,走finnaly兜底逻辑: {e}")
+            result = self._fallback_split(local_video_path, split_num, video_duration, part_time)
+            self.redis_client.hset(self.redis_key, material_id, f'finish_all:{json.dumps(result["splitVideoPartResults"], ensure_ascii=False)}')
+            return result
     def base_video_split(self, video_input: str, split_num: int = 2, part_time: int = 45, mode: str = 'auto', video_duration:int = 167, material_id = "zhipeng_test"):
         """
         智能视频切分函数。
@@ -203,10 +251,13 @@ class Smart_video_split(Base_video_class):
         mode = source_input.get("mode", 0)
         video_duration = source_input.get("video_duration", 167)
         task_id = source_input.get("material_id", "zhipeng_test")
+        #统一切法
         if mode == 1:
-            res = self.dashscope_video_split(video_input, split_num, part_time, video_duration, material_id=task_id)
+            # res = self.dashscope_video_split(video_input, split_num, part_time, video_duration, material_id=task_id)
+            res = self.pipeline_video_split_process(video_input, split_num, part_time, mode, video_duration, task_id)
         else:
-            res = self.base_video_split(video_input, split_num, part_time, mode, video_duration, task_id)
+            #豆包切
+            res = self.pipeline_video_split_process(video_input, split_num, part_time, mode, video_duration, task_id)
         return res
 
 
