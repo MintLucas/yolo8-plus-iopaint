@@ -278,6 +278,7 @@ class token_fresh:
                         ]
                     }
                 }}
+        self.log.info(f"call_model_zp_llm_input_log :{model_type}\n{model_ext}")
         if user_prompt_media:
             model_ext['model_ext']['messages'].append({"role": "user", "content": user_prompt_media})
         
@@ -299,7 +300,7 @@ class token_fresh:
                 llm_res_json = self.call_model_local(params, model_ext, source=source)
                 # self.log.info(f"llm_res_none_call_model_zp_log_local :{model_type}\n{llm_res_json}")
                 llm_res = self.decode_llm_it_output(llm_res_json, model_type)
-            self.log.info(f"call_model_zp_log :{model_type}\n{llm_res_json}")
+            self.log.info(f"call_model_zp_llm_res_log :{model_type}\n{llm_res_json.get('response_data', {})}")
         except:
             self.log.error(f"call_model_zpl_error: input:{llm_res_json}, " + traceback.format_exc())
             print(traceback.format_exc())
