@@ -14,6 +14,7 @@ from util.token_util_new import token_fresh, models_dict
 from util.api_client_new import Api_client
 from util.url_util import url_to_base64
 from agi_server.cat_rec_star.model_config import Model_config
+from agi_server.cat_rec_star.emoji_check import load_emoticon_dict_from_url,filter_text_emoticons
 class Cat_Server_help:
     def __init__(self, log = get_logger("server_log/Cat_Server_help")):
         self.log = log
@@ -22,6 +23,7 @@ class Cat_Server_help:
         self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog"]
         self.show__batch_server = Api_client(session=self.session)
         self.model_config = Model_config(self.log)
+        self.emoji_dict = load_emoticon_dict_from_url()
     def sync_llm_result_post(self, task_id, text_content):
         # 正式地址
         url = 'http://i.answer.media.weibo.com/admin/task/receivetext'
@@ -75,6 +77,7 @@ class Cat_Server_help:
             result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
         else:
             result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"])
+        result = filter_text_emoticons(result, self.emoji_dict)
         if not result:
             res = {}
         else:
