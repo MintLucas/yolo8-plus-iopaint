@@ -57,6 +57,7 @@ class ApiRequest(BaseModel):
     blog_img: list = []
     blog_video: list = []
     blog_video_asr: list = []
+    blog_video_summary: list = []
     user_info: str = ""
     history_blog: list = []
     reference_blog: list = []

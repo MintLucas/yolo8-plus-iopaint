@@ -20,7 +20,7 @@ class Cat_Server_help:
         self.log = log
         self.session = requests.session()
         self.tf = token_fresh(get_logger("llm_log/Cat_Server_help"))
-        self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog", "blog_video_asr"]
+        self.supply_key = ["blog_text", "user_info", "history_blog", "reference_blog", "blog_video_asr", "blog_video_summary"]
         self.show__batch_server = Api_client(session=self.session)
         self.model_config = Model_config(self.log)
         self.emoji_dict = load_emoticon_dict_from_url()
