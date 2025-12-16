@@ -52,8 +52,11 @@
 <输出格式要求>
  必须严格按照以下JSON格式输出：
 {
-  "generated_texts":{
+  "generated_texts":[
+  {
+      "style_type":"默认"，
       "content": "转发文案正文内容，严格控制在50字以内。"
-  }
+    }
+  ]
 }
 </输出格式要求>
