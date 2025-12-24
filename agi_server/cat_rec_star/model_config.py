@@ -34,7 +34,7 @@ class Model_config:
         }
         
     def get(self, key):
-        trans_key = self.uid_map.get("key", "6679129087") if any(char.isdigit() for char in key) else key
+        trans_key = self.uid_map.get(key, "6679129087") if any(char.isdigit() for char in key) else key
         return self.config_dict.get(trans_key, self.prompt_default)
         
     def get_prompt(self, path):
@@ -46,6 +46,6 @@ if __name__ == '__main__':
     model_config = Model_config()
     print(model_config.config_dict)
     model_config.init_all_prompt()
-    print(model_config.get("sport"))
+    print(model_config.get("5608272697"))
     sys.exit()
 
