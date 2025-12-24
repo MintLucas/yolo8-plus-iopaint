@@ -115,11 +115,12 @@ echo "----------------------------------------"
 
 # 1. Reread: 读取新增配置
 echo ">> Executing reread..."
-"$SUPERVISOR_CTL" -c "$CONF_FILE" reread
+echo "$SUPERVISOR_CTL" "$CONF_FILE"
+"$PYTHON_BIN" "$SUPERVISOR_CTL" -c "$CONF_FILE" reread
 
 # 2. Update: 应用变更
 echo ">> Executing update..."
-"$SUPERVISOR_CTL" -c "$CONF_FILE" update
+"$PYTHON_BIN" "$SUPERVISOR_CTL" -c "$CONF_FILE" update
 
 echo "----------------------------------------"
 echo "✅ 完成！"

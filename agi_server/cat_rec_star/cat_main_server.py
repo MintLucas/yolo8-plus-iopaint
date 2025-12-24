@@ -51,6 +51,7 @@ class SingleQuestion(BaseModel):
 
 class ApiRequest(BaseModel):
     task_id: int = 100
+    task_type: str = ""
     blog_text: str = ""
     uid: str = ""
     nick: str = ""
@@ -61,6 +62,7 @@ class ApiRequest(BaseModel):
     user_info: str = ""
     history_blog: list = []
     reference_blog: list = []
+    
     
 class ResultItem(BaseModel):
     question_id: str

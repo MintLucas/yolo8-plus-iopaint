@@ -54,6 +54,7 @@ class Cat_Server_help:
 
     def run(self, para_dict):
         author_uid = para_dict.get("uid", "6679129087")
+        task_type = para_dict.get("task_type", "star")
         base_prompt = self.model_config.get(author_uid)
 
         # base_prompt = '请按时间描述一下视频内容'
