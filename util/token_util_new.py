@@ -279,8 +279,16 @@ class token_fresh:
                     }
                 }}
         self.log.info(f"call_model_zp_llm_input_log :{model_type}\n{model_ext}")
+        # if user_prompt_media:
+        #     model_ext['model_ext']['messages'].append({"role": "user", "content": user_prompt_media})
         if user_prompt_media:
-            model_ext['model_ext']['messages'].append({"role": "user", "content": user_prompt_media})
+            # 区分qwen模型和其他模型，使用不同的messages路径
+            if 'qwen' in model_type:
+                # qwen模型：messages在 input 子字典中
+                model_ext['model_ext']['input']['messages'].append({"role": "user", "content": user_prompt_media})
+            else:
+                # 其他模型：messages直接在model_ext下
+                model_ext['model_ext']['messages'].append({"role": "user", "content": user_prompt_media})
         
         utype, model_id = model_type.split(":")
         params = {
@@ -701,8 +709,39 @@ if __name__ == '__main__':
     source = "116913455"
     # res1 = tf.call_model_google(user_prompt, "", model_test[-1])
     res2 = tf.call_model_zp(user_prompt, "", models_dict['text-qwen'])
-    import datetime
+    print(res2)
+    # import datetime
 
-    next_month = datetime.datetime.now() + datetime.timedelta(month_clu=1)
-    print(next_month)
+    # next_month = datetime.datetime.now() + datetime.timedelta(month_clu=1)
+    # print(next_month)
+    # local_img_abs_path = "/workspace/work/zhipeng16/git/Multi_agent_image_tagging/无他图片标签测试图/1、主体类型/5、食物/食物2.jpg"  # 本地图片绝对路径
+    # user_prompt = """
+    # 任务：判断图片的核心主体，仅从以下一级分类的六个分类中选择1个（必须选，不新增）：
+    # 一级分类列表：人像、动物（宠物）、植物、风景、食物、建筑
+    # 如果图片不在这个六个主体中，请选择“其他”。
+    # 输出要求：仅返回分类名称（如“人像”“食物”），不添加任何额外解释。
+    # """
+    # system_prompt = ""
+    # model_type = "volcengine:Doubao-1.5-vision-pro-250328"
+    # source = "356732087"
+
+    # # 3. 格式化本地图片（type='file'指定本地文件）
+    # formatted_imgs = tf.img_to_model_ext(
+    #     imgs=[local_img_abs_path],
+    #     role=[],
+    #     type='file'
+    # )
+    # print(formatted_imgs)
+    # model_response = tf.call_model_zp(
+    #     user_prompt=user_prompt,
+    #     system_prompt=system_prompt,
+    #     model_type=model_type,
+    #     source=source,
+    #     user_prompt_media=formatted_imgs
+    # )
+
+    # print(model_response)
+
+
+
 

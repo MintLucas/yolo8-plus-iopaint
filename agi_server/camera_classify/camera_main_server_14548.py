@@ -142,7 +142,7 @@ async def api_process_image(request: ImageRequest):
     para_dict = request.dict()
     task_id = para_dict.get("task_id", -1)
     try:
-        res = await server_help.image_process1(para_dict)
+        res = await server_help.image_process0(para_dict)
         # res = {"test_mode": "success"}
         # 构建返回结果对象
         result = ApiResponse(
@@ -170,53 +170,8 @@ async def api_process_image(request: ImageRequest):
             detail=f"生成失败，task_id: {task_id}, 错误: {error_msg}"
         )
 
-# @app.post(path="/process_image_api", response_model=ApiResponse, summary="图片多标签理解-调用官方API")
-# async def api_process_image(request: ImagePathRequest):
-#     # 新增：记录完整传入数据体日志
-#     server_help.log.info(f"收到请求：传入数据体={json.dumps(request.dict(), ensure_ascii=False)}")  # 完整记录传入数据
-
-#     # 生成唯一任务ID（方便测试追踪）
-#     task_id_server = str(uuid.uuid4())
-#     start_time = time.time()
-#     # 记录任务初始状态
-#     TASK_RECORD[task_id_server] = {
-#         "status": "processing",
-#         "start_time": start_time
-#     }
-#     para_dict = request.dict()
-#     task_id = para_dict.get("task_id", -1)
-#     try:
-#         res = await server_help.image_process_api(para_dict)
-#         # res = {"test_mode": "success"}
-#         # 构建返回结果对象
-#         result = ApiResponse(
-#             code=200,
-#             result=res,
-#             task_id=str(para_dict["task_id"]) # 返回唯一任务ID
-#         )
-        
-#         # 新增：记录完整传出数据体日志
-#         server_help.log.info(f"返回结果：传出数据体={json.dumps(result.dict(), ensure_ascii=False)}")  # 完整记录返回数据
-#         return result
-
-#     except Exception as e:
-#         # 捕获异常，更新任务失败状态
-#         error_msg = str(e)
-#         server_help.log.error(f"{traceback.format_exc()}")
-#         TASK_RECORD[task_id].update({
-#             "status": "failed",
-#             "error_msg": error_msg,
-#             "end_time": time.time()
-#         })
-#         # 抛出异常，告知测试时的错误原因
-#         raise HTTPException(
-#             status_code=-1,
-#             detail=f"生成失败，task_id: {task_id}, 错误: {error_msg}"
-#         )
-
-
 # --------------------------
-# 新增：任务状态查询接口（测试时可查看生成进度和结果）
+# 任务状态查询接口（测试时可查看生成进度和结果）
 # --------------------------
 @app.get(
     path="/task-status/{task_id}",
@@ -240,4 +195,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='camera_main_server:app', host='0.0.0.0', port=14547, workers=1)
+    uvicorn.run(app='camera_main_server_14548:app', host='0.0.0.0', port=14548, workers=1)

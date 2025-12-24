@@ -6,7 +6,18 @@
 # @File    : camera_server_help.py
 # @Usage   : Describe the file's purpose
 import sys,os
+import asyncio
+from pathlib import Path
+from fastapi import HTTPException
+import traceback
+# target_project_dir = Path("/workspace/work/zhipeng16/git/Multi_agent_image_tagging")
+# sys.path.append(str(target_project_dir.absolute()))
+git_root = Path("/workspace/work/zhipeng16/git")  # 两个项目的共同父目录
+sys.path.append(str(git_root.absolute()))  # 加入Python搜索路径
 sys.path.append(os.getcwd())
+from Multi_agent_image_tagging.image_uds_local1 import process_single_image1
+from Multi_agent_image_tagging.image_uds_local0 import process_single_image0
+from Multi_agent_image_tagging.image_uds_api import process_single_image_api
 import json
 from util.mylogging import get_logger
 import requests
@@ -54,7 +65,7 @@ class Camera_Server_help:
 
     def run(self, para_dict):
         author_uid = para_dict.get("uid", "6679129087")
-        base_prompt = self.model_config.get(author_uid)
+        base_prompt = self.model_config.get(athor_uid)
 
         # base_prompt = '请按时间描述一下视频内容'
         """
@@ -83,6 +94,67 @@ class Camera_Server_help:
         else:
             res = json.loads(result.strip("```json").strip("```"))
         return res
+
+    async def image_process0(self, para_dict):
+        """
+        单张图片标签提取接口
+        - 输入：图片绝对路径
+        - 输出：指定格式的标签结果字典
+        """
+        # 1. 校验请求参数
+        # img_path = para_dict.image_path.strip()
+        img_path = para_dict["image_info"]
+        if not img_path:
+            raise HTTPException(status_code=400, detail="图片信息不能为空")
+        
+        # 2. 调用单张处理函数
+        result = await asyncio.to_thread(process_single_image0, img_path)
+        # result = process_single_image(img_path)
+        
+        # 3. 返回结果
+        return result
+    
+
+    async def image_process1(self, para_dict):
+        """
+        单张图片标签提取接口
+        - 输入：图片绝对路径
+        - 输出：指定格式的标签结果字典
+        """
+        # 1. 校验请求参数
+        # img_path = para_dict.image_path.strip()
+        img_path = para_dict["image_info"]
+        if not img_path:
+            raise HTTPException(status_code=400, detail="图片路径不能为空")
+        
+        # 2. 调用单张处理函数
+        result = await asyncio.to_thread(process_single_image1, img_path)
+        # result = process_single_image(img_path)
+        
+        # 3. 返回结果
+        return result
+
+    async def image_process_api(self, para_dict):
+        """
+        单张图片标签提取接口
+        - 输入：图片绝对路径
+        - 输出：指定格式的标签结果字典
+        """
+        # 1. 校验请求参数
+        # img_path = para_dict.image_path.strip()
+        img_path = para_dict["image_path"]
+        if not img_path:
+            raise HTTPException(status_code=400, detail="图片路径不能为空")
+        
+        # 2. 调用单张处理函数
+        result = await asyncio.to_thread(process_single_image_api, img_path)
+        # result = process_single_image(img_path)
+        
+        # 3. 返回结果
+        return result
+    
+    
+
     
 if __name__ == '__main__':
     server_help = Camera_Server_help()
