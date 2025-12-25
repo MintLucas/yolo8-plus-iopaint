@@ -23,6 +23,7 @@ class Model_config:
         self.prompt_live = self.get_prompt("config/prompt/cat_rec_star/live_create_blog_v1_mode0.md")
         self.prompt_car = self.get_prompt("config/prompt/cat_rec_star/car_create_blog_v1_mode0.md")
         self.prompt_sport = self.get_prompt("config/prompt/cat_rec_star/sport_create_blog_v1_mode0.md")
+        self.prompt_new = self.get_prompt("config/prompt/cat_rec_star/new_create_blog_v1_mode0.md")
 
         
         self.config_dict = {
@@ -31,6 +32,7 @@ class Model_config:
             'live': self.prompt_live,
             'car': self.prompt_car,
             'sport': self.prompt_sport,
+            'new': self.prompt_new
         }
         
     def get(self, key):
