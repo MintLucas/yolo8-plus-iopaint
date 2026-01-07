@@ -75,9 +75,9 @@ class Cat_Server_help:
             if para_dict['blog_video']:
                 for one_url in para_dict['blog_video']:
                     use_medias.append({'type': 'video_url', 'video_url': {'url': one_url}})
-            result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
+            result = self.tf.call_model_zp(json.dumps(supply_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"],user_prompt_media=use_medias)
         else:
-            result = self.tf.call_model_zp(json.dumps(para_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"])
+            result = self.tf.call_model_zp(json.dumps(supply_dict, ensure_ascii=False), base_prompt, models_dict["text-huoshan"])
         result = filter_text_emoticons(result, self.emoji_dict)
         if not result:
             res = {}
