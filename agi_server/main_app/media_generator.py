@@ -272,8 +272,10 @@ def process_api_questions_generate_media(
             results.append(build_result(question_id, question_content, media_url, "success", "", media_script))
 
         except Exception as e:
+            import traceback
+            er_msg = traceback.format_exc()
             error = f"{media_type}生成失败: {str(e)[:100]}"
-            logger.error(f"receive_id={receive_id} | {question_id} {error}")
+            logger.error(f"receive_id={receive_id} | {question_id} {error} |{er_msg}")
             results.append(build_result(question_id, question_content, "", "failed", error, media_script))
             continue
 
