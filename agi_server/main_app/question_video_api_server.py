@@ -112,9 +112,9 @@ async def generate_video_path_api(request: ApiRequest):
                     media_model_type = models_dict["video-huoshan-fast"]
                 llm_res = process_api_questions_generate_media(questions=question_list_dict,tf=tf,media_type = para_dict["mode_type"], media_model_type=media_model_type,para_dict=para_dict)
                 server_help.log.info(f"task_id={para_dict['task_id']}异步任务处理成功:{llm_res}")
-                json_res = json.dumps(llm_res, ensure_ascii=False)
+                #json_res = json.dumps(llm_res, ensure_ascii=False)
                 save_res = "success"
-                res = server_help.sync_llm_result_post(para_dict["task_id"], json_res)
+                res = server_help.sync_llm_result_post_batch(para_dict["task_id"], llm_res, 50, 100)
             except Exception as e:
                 # 处理异步任务中的异常
                 error_message = f"异步任务处理失败: {str(e)}"
