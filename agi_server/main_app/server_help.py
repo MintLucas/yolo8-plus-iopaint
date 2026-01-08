@@ -7,8 +7,9 @@
 # @Usage   : Describe the file's purpose
 from util.mylogging import get_logger
 import requests
+import json
 class Server_Help:
-    def __init__(self, log = get_logger("server_log/Server_Help")):
+    def __init__(self, log = get_logger("server_log/question_Server_Help")):
         self.log = log
         self.session = requests.session()
     def sync_llm_result_post(self, task_id, text_content):
@@ -45,7 +46,7 @@ class Server_Help:
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         
         # 记录同步前的数据日志
-        self.log.info(f"开始同步LLM结果 | task_id: {task_id} | 待同步内容:")  # 限制内容长度，避免日志过长
+        self.log.info(f"开始同步LLM结果 | task_id: {task_id} | 待同步内容:{datas[:50]}")  # 限制内容长度，避免日志过长
         self.log.debug(f"同步请求详情 | URL: {url} | 请求头: {headers}")  # 调试级别日志记录详细参数
         
         response_content = None
