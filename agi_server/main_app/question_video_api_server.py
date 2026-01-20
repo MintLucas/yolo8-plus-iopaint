@@ -114,7 +114,7 @@ async def generate_video_path_api(request: ApiRequest):
                 server_help.log.info(f"task_id={para_dict['task_id']}异步任务处理成功:{llm_res}")
                 #json_res = json.dumps(llm_res, ensure_ascii=False)
                 save_res = "success"
-                res = server_help.sync_llm_result_post_batch(para_dict["task_id"], llm_res, 1, 100)
+                res = server_help.sync_llm_result_post_batch(para_dict["task_id"], llm_res, 1, 1000)
             except Exception as e:
                 # 处理异步任务中的异常
                 error_message = f"异步任务处理失败: {str(e)}"
