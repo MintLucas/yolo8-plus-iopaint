@@ -259,7 +259,7 @@ def process_api_questions_generate_media(
         return results
 
     logger.info(f"receive_id={receive_id} 开始处理{total}个{media_type}生成任务")
-    base_prompt = load_prompt_template(media_type)
+
 
     for idx, item in enumerate(questions, 1):
         question_id = str(item.get("question_id", f"unknown_{idx}"))
@@ -296,7 +296,8 @@ def process_api_questions_generate_media(
                 answer = "空"
             if len(choose_list) == 2 and media_type == MEDIA_TYPE_IMAGE:
                 media_type = MEDIA_TYPE_IMAGE_PK
-
+                
+            base_prompt = load_prompt_template(media_type)
                 
             # 1. 生成媒体描述文案
             style_key, style_desc = get_random_style(media_type)
