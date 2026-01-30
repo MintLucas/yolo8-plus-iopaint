@@ -27,6 +27,7 @@ class Model_config:
         self.prompt_exercise = self.get_prompt("config/prompt/cat_rec_star/exercise_create_blog_v1_mode0.md")
         self.prompt_law = self.get_prompt("config/prompt/cat_rec_star/law_create_blog_v1_mode0.md")
         self.prompt_military = self.get_prompt("config/prompt/cat_rec_star/military_create_blog_v1_mode0.md")
+        self.prompt_food = self.get_prompt("config/prompt/cat_rec_star/food_create_blog_v1_mode0.md")
         
         self.config_dict = {
             'star': self.prompt_star,
@@ -38,6 +39,7 @@ class Model_config:
             'exercise': self.prompt_exercise,
             'law': self.prompt_law,
             'military': self.prompt_military,
+            'food': self.prompt_food,
         }
         
     def get(self, key):

@@ -132,15 +132,17 @@ async def api_process_image(request: ImageRequest):
     server_help.log.info(f"收到请求：传入数据体={json.dumps(request.dict(), ensure_ascii=False)}")  # 完整记录传入数据
 
     # 生成唯一任务ID（方便测试追踪）
-    task_id_server = str(uuid.uuid4())
+    # task_id_server = str(uuid.uuid4())
     start_time = time.time()
     # 记录任务初始状态
-    TASK_RECORD[task_id_server] = {
+    para_dict = request.dict()
+    task_id = para_dict.get("task_id", "200")
+    TASK_RECORD[task_id] = {
         "status": "processing",
         "start_time": start_time
     }
-    para_dict = request.dict()
-    task_id = para_dict.get("task_id", -1)
+    # para_dict = request.dict()
+    # task_id = para_dict.get("task_id", -1)
     try:
         res = await server_help.image_process0(para_dict)
         # res = {"test_mode": "success"}

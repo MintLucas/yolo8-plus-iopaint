@@ -61,6 +61,8 @@ class ApiRequest(BaseModel):
     reference_blog: list = []
 
 class ImageRequest(BaseModel):
+    # mode: str = "0"  # 0：默认32B走阿里云接口，3B走本地；1：32B走call_zp，3B走本地；2：32B和3B模型都替换为call_zp中的模型
+    # model_type: str = "multi-label"  # 模型类型：multi-label或detailed
     task_id: str = "200"
     image_info: str  # 输入：单张图片信息 (路径或URL)
     extend_info: str = "" # 额外扩展信息，可选
@@ -132,15 +134,18 @@ async def api_process_image(request: ImageRequest):
     server_help.log.info(f"收到请求：传入数据体={json.dumps(request.dict(), ensure_ascii=False)}")  # 完整记录传入数据
 
     # 生成唯一任务ID（方便测试追踪）
-    task_id_server = str(uuid.uuid4())
+    # task_id_server = str(uuid.uuid4())
     start_time = time.time()
+    para_dict = request.dict()
+    # task_id = para_dict.get("task_id", -1)
+    task_id = para_dict.get("task_id", "200")
     # 记录任务初始状态
-    TASK_RECORD[task_id_server] = {
+    TASK_RECORD[task_id] = {
         "status": "processing",
         "start_time": start_time
     }
-    para_dict = request.dict()
-    task_id = para_dict.get("task_id", -1)
+    # para_dict = request.dict()
+    # task_id = para_dict.get("task_id", -1)
     try:
         res = await server_help.image_process1(para_dict)
         # res = {"test_mode": "success"}
@@ -166,7 +171,7 @@ async def api_process_image(request: ImageRequest):
         })
         # 抛出异常，告知测试时的错误原因
         raise HTTPException(
-            status_code=-1,
+            status_code=500,
             detail=f"生成失败，task_id: {task_id}, 错误: {error_msg}"
         )
 

@@ -124,10 +124,13 @@ class Camera_Server_help:
         # 1. 校验请求参数
         # img_path = para_dict.image_path.strip()
         img_path = para_dict["image_info"]
+        # mode = para_dict.get("mode", "0")
+        # model_type = para_dict.get("model_type", "multi-label")
         if not img_path:
             raise HTTPException(status_code=400, detail="图片路径不能为空")
         
         # 2. 调用单张处理函数
+        # result = await asyncio.to_thread(process_single_image1, img_path, mode, model_type)
         result = await asyncio.to_thread(process_single_image1, img_path)
         # result = process_single_image(img_path)
         
