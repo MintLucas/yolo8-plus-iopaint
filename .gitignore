@@ -7,7 +7,8 @@ test/
 log/
 models/
 tmp_data
-
+agi_server/main_app/BGM
+config/sup_conf/*.conf
 # C extensions
 *.so
 
