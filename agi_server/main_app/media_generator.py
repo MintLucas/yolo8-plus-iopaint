@@ -350,6 +350,12 @@ def process_api_questions_generate_media(
             if media_type != MEDIA_TYPE_VIDEO:
                 picture_save_path = f"{file_pre_dir}{single_file_name}.png"
                 media_path = ou.img2path(media_path, picture_save_path, size = ())
+            if media_type == MEDIA_TYPE_VIDEO:
+                    bgm_dir = "agi_server/main_app/BGM"
+                    bgm_path = os.path.join(bgm_dir, random.choice([f for f in os.listdir(bgm_dir) if f.lower().endswith('.mp3')]))
+                    logger.info(f"receive_id={receive_id} | {question_id} {media_type} {bgm_path} random随机切分 合成背景音乐...")
+                    merge_audio_video_pro(media_path, bgm_path, mode="random", volume=0.8, fade_duration=2.0)    
+            
             # 3. 上传OSS并返回URL
             oss_path = file_pre_dir
             media_url = ou.path2url(local_file_path=media_path, object_key=oss_path, save_local=True)
@@ -436,86 +442,86 @@ def test_media_generator(tf, media_type: str = MEDIA_TYPE_IMAGE):
     logger.info(f"测试结果：{result}")
     return result
 
-def merge_audio_video_pro(video_path, audio_path, output_path="output.mp4", 
-                          mode="normal", volume=1.0, fade_duration=2.0):
+def merge_audio_video_pro(video_path, audio_path, mode="normal", volume=1.0, fade_duration=2.0):
     """
-    高级音视频合成函数
-    :param video_path: 视频路径
-    :param audio_path: 音频路径
-    :param mode: "normal" 或 "random" (随机切片重组)
-    :param volume: 音量系数 (1.0 为原声, <1.0 变小, >1.0 变大)
-    :param fade_duration: 结尾淡出时长 (秒)
+    将音频合入视频并直接替换原视频文件
     """
-    video_clip = VideoFileClip(video_path)
-    video_duration = video_clip.duration
-    temp_audio_name = f"temp_processed_{random.randint(1000, 9999)}.mp3"
+    # 生成临时文件名，避免冲突
+    temp_output = f"temp_final_{random.randint(1000, 9999)}.mp4"
+    temp_audio_proc = f"temp_audio_{random.randint(1000, 9999)}.mp3"
+    
+    video_clip = None
+    final_audio_clip = None
 
     try:
+        video_clip = VideoFileClip(video_path)
+        video_duration = video_clip.duration
+
+        # --- 音频处理逻辑 (与之前一致) ---
         if mode == "random":
-            print(f"🎲 正在以随机模式处理音频: {audio_path}")
+            # print(f"🎲 正在随机重组音频...")
             song = AudioSegment.from_file(audio_path)
-            
-            # 检测断点并切割
             chunks = split_on_silence(song, min_silence_len=500, silence_thresh=-40)
             
-            # 兜底：如果没有足够断点，按 5 秒一段强制切
             if len(chunks) < 2:
                 chunk_len = 5000 
                 chunks = [song[i:i+chunk_len] for i in range(0, len(song), chunk_len)]
             
-            # 随机重组音频，直到覆盖视频时长
-            random.shuffle(chunks) # 先打乱池子
+            random.shuffle(chunks)
             random_combined = AudioSegment.empty()
-            
-            while random_combined.duration_seconds < (video_duration + 2): # 多准备2秒备用
+            while random_combined.duration_seconds < (video_duration + 2):
                 random_chunk = random.choice(chunks)
-                # 使用 100ms 交叉渐变避免“爆音”
-                if len(random_combined) > 0:
-                    random_combined = random_combined.append(random_chunk, crossfade=100)
-                else:
-                    random_combined = random_chunk
+                random_combined = random_combined.append(random_chunk, crossfade=100) if len(random_combined) > 0 else random_chunk
             
-            random_combined.export(temp_audio_name, format="mp3")
-            final_audio_clip = AudioFileClip(temp_audio_name)
+            random_combined.export(temp_audio_proc, format="mp3")
+            final_audio_clip = AudioFileClip(temp_audio_proc)
         else:
             final_audio_clip = AudioFileClip(audio_path)
 
-        # --- 核心音频处理 ---
-        # 1. 调整音量
-        final_audio_clip = final_audio_clip.volumex(volume)
-        
-        # 2. 设置时长 (如果音频比视频长，这里会截断)
-        final_audio_clip = final_audio_clip.set_duration(video_duration)
-        
-        # 3. 添加淡出效果
+        # 音量与淡出处理
+        final_audio_clip = final_audio_clip.volumex(volume).set_duration(video_duration)
         if fade_duration > 0:
             final_audio_clip = final_audio_clip.audio_fadeout(fade_duration)
 
-        # --- 合成 ---
+        # --- 合成输出到临时文件 ---
         final_video = video_clip.set_audio(final_audio_clip)
-        final_video.write_videofile(output_path, codec='libx264', audio_codec='aac', fps=video_clip.fps)
+        final_video.write_videofile(temp_output, codec='libx264', audio_codec='aac', fps=video_clip.fps)
 
-        # 关闭资源
+        # --- 关键步骤：释放文件句柄 ---
+        # 必须先关闭 clip，否则无法删除/移动原文件
         video_clip.close()
         final_audio_clip.close()
-        
-        if os.path.exists(temp_audio_name):
-            os.remove(temp_audio_name)
 
-        return output_path
+        # --- 替换原文件 ---
+        # print(f"🔄 正在替换原视频: {video_path}")
+        # 使用 os.replace 强制覆盖原路径
+        os.replace(temp_output, video_path)
+        
+        # 清理临时音频文件
+        if os.path.exists(temp_audio_proc):
+            os.remove(temp_audio_proc)
+
+        # print("✨ 替换完成！")
+        return video_path
 
     except Exception as e:
-        print(f"❌ 处理失败: {e}")
+        # print(f"❌ 发生错误: {e}")
+        # 发生错误时尝试清理
+        if video_clip: video_clip.close()
+        if os.path.exists(temp_output): os.remove(temp_output)
         return None
 
 
 if __name__ == '__main__':
     # --- 使用场景举例 ---
     # 1. 正常合并，音量减半，结尾3秒淡出
-    merge_audio_video_pro("v.mp4", "a.mp3", mode="normal", volume=0.5, fade_duration=3.0)
+
+    bgm_dir = "agi_server/main_app/BGM"
+    bgm_path = os.path.join(bgm_dir, random.choice([f for f in os.listdir(bgm_dir) if f.lower().endswith('.mp3')]))
+    res = merge_audio_video_pro("agi_server/111.mp4", bgm_path, mode="normal", volume=0.5, fade_duration=3.0)
 
     # 2. 随机混剪，音量增强，无淡出
-    merge_audio_video_pro("v.mp4", "a.mp3", mode="random", volume=1.2, fade_duration=0)
+    res2 = merge_audio_video_pro("agi_server/111.mp4", bgm_path, mode="random", volume=0.8, fade_duration=3.0)
     
     res = get_random_Q("agi_server/main_app/q_x", "q_weibo_zo.png")
     tf = token_fresh()
