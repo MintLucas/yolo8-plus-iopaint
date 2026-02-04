@@ -17,6 +17,7 @@ sys.path.append(str(git_root.absolute()))  # 加入Python搜索路径
 sys.path.append(os.getcwd())
 from Multi_agent_image_tagging.image_uds_local1 import process_single_image1
 from Multi_agent_image_tagging.image_uds_local0 import process_single_image0
+from Multi_agent_image_tagging.image_uds_local import process_single_image
 from Multi_agent_image_tagging.image_uds_api import process_single_image_api
 import json
 from util.mylogging import get_logger
@@ -95,6 +96,25 @@ class Camera_Server_help:
             res = json.loads(result.strip("```json").strip("```"))
         return res
 
+
+    async def image_process(self, para_dict):
+        """
+        单张图片标签提取接口
+        - 输入：图片绝对路径
+        - 输出：指定格式的标签结果字典
+        """
+        # 1. 校验请求参数
+        # img_path = para_dict.image_path.strip()
+        img_path = para_dict["image_info"]
+        if not img_path:
+            raise HTTPException(status_code=400, detail="图片信息不能为空")
+        
+        # 2. 调用单张处理函数
+        result = await asyncio.to_thread(process_single_image, img_path)
+        # result = process_single_image(img_path)
+        
+        # 3. 返回结果
+        return result
     async def image_process0(self, para_dict):
         """
         单张图片标签提取接口

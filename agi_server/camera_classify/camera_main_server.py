@@ -147,7 +147,7 @@ async def api_process_image(request: ImageRequest):
     # para_dict = request.dict()
     # task_id = para_dict.get("task_id", -1)
     try:
-        res = await server_help.image_process1(para_dict)
+        res = await server_help.image_process(para_dict)
         # res = {"test_mode": "success"}
         # 构建返回结果对象
         result = ApiResponse(
@@ -245,4 +245,4 @@ if __name__ == '__main__':
 
     import uvicorn
 
-    uvicorn.run(app='camera_main_server:app', host='0.0.0.0', port=14547, workers=1)
+    uvicorn.run(app='camera_main_server:app', host='0.0.0.0', port=14547, workers=3)
