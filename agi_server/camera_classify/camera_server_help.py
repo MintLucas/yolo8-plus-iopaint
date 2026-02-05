@@ -17,7 +17,7 @@ sys.path.append(str(git_root.absolute()))  # 加入Python搜索路径
 sys.path.append(os.getcwd())
 from Multi_agent_image_tagging.image_uds_local1 import process_single_image1
 from Multi_agent_image_tagging.image_uds_local0 import process_single_image0
-from Multi_agent_image_tagging.image_uds_local import process_single_image
+from Multi_agent_image_tagging.image_uds_local_new import process_single_image
 from Multi_agent_image_tagging.image_uds_api import process_single_image_api
 import json
 from util.mylogging import get_logger
