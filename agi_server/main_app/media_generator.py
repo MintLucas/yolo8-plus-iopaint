@@ -173,7 +173,7 @@ def get_random_style(media_type: str) -> tuple:
 
     # 4. 模拟/胶片风格 (Analog/Film Styles)
     # [这些是“安全”风格，因为“颗粒”和“模糊”会主动“隐藏”VLM的瑕疵]
-    "vintage_film": "复古胶片风格（画面有明显颗粒感，色彩饱和度偏低，轻微褪色，模拟8mm胶片效果）",
+    # "vintage_film": "复古胶片风格（画面有明显颗粒感，色彩饱和度偏低，轻微褪色，模拟8mm胶片效果）",
     "retro_hongkong": "复古港风（整体色调偏暖黄，有胶片颗粒感，轻微褪色效果，画面对比度略高）",
 
     # 5. [高风险] 真实/细节风格 (Realistic/Detailed Styles)
