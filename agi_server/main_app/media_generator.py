@@ -266,7 +266,7 @@ def process_api_questions_generate_media(
 
     logger.info(f"receive_id={receive_id} 开始处理{total}个{media_type}生成任务")
 
-
+    default_media_type = media_type
     for idx, item in enumerate(questions, 1):
         question_id = str(item.get("question_id", f"unknown_{idx}"))
         question_content = item.get("question", "")
@@ -296,7 +296,7 @@ def process_api_questions_generate_media(
         try:
 
             
-            
+            media_type = default_media_type
             #路由模块儿
             if "哪" in question_content:
                 answer = "空"
