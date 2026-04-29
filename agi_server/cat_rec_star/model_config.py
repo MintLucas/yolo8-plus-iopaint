@@ -28,6 +28,8 @@ class Model_config:
         self.prompt_law = self.get_prompt("config/prompt/cat_rec_star/law_create_blog_v1_mode0.md")
         self.prompt_military = self.get_prompt("config/prompt/cat_rec_star/military_create_blog_v1_mode0.md")
         self.prompt_food = self.get_prompt("config/prompt/cat_rec_star/food_create_blog_v1_mode0.md")
+        self.prompt_whisper = self.get_prompt("config/prompt/cat_rec_star/whisper_create_blog_v1_mode0.md")
+        self.prompt_young = self.get_prompt("config/prompt/cat_rec_star/young_create_blog_v1_mode0.md")
         
         self.config_dict = {
             'star': self.prompt_star,
@@ -40,6 +42,8 @@ class Model_config:
             'law': self.prompt_law,
             'military': self.prompt_military,
             'food': self.prompt_food,
+            'whisper': self.prompt_whisper,
+            'young': self.prompt_young
         }
         
     def get(self, key):
