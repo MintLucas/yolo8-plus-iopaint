@@ -7,6 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Python 绝对路径（与 gpu_server/run_keep_alive.sh 保持一致）
+PYTHON="${PYTHON:-/workspace/work/moniforge3/envs/lyf50_vllm/bin/python}"
+
 export MODEL_PATH="${MODEL_PATH:-/workspace/work/zhipeng16/git/Multi_agent_image_tagging/model/Qwen/Qwen2.5-VL-3B-Instruct}"
 export HOST="${HOST:-0.0.0.0}"
 export PORT="${PORT:-8000}"
@@ -42,4 +45,4 @@ if [[ "$ENFORCE_EAGER" == "1" || "$ENFORCE_EAGER" == "true" || "$ENFORCE_EAGER" 
 fi
 
 # -u: unbuffered stdout/stderr，便于 tail -f 实时看日志
-python -u vllm_server.py "${ARGS[@]}" 2>&1 | tee "$LOG_FILE"
+"$PYTHON" -u vllm_server.py "${ARGS[@]}" 2>&1 | tee "$LOG_FILE"
