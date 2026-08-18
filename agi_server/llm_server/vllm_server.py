@@ -159,27 +159,87 @@ def _logprobs_for_prompt_response(
     top_logprobs: int = 0,
 ) -> LogprobsResponse:
     """
-    用 vLLM 计算 response 在 prompt 条件下的逐 token logprob。
+    计算 response 在 prompt 条件下的逐 token logprob。
 
-    实现方式
-    --------
-    vLLM 的 generate 接口支持 prompt_logprobs，用于返回 prompt 中每个 token 的 logprob。
-    因此将 full_text = prompt + response 输入模型，并请求 prompt_logprobs，
-    然后截取 response 部分 token 的 logprob。
+    返回：
+        logprob_i = ln P(x_i | prompt, x_<i)
+
+        nll_bits =
+            -sum(logprob_i) / ln(2)
+
+    注意：
+        vLLM 返回的是自然对数 logprob，不是 log2。
     """
+
     llm = _require_llm()
     tokenizer = state.tokenizer
+
     if tokenizer is None:
-        raise HTTPException(status_code=500, detail="Tokenizer not initialized")
+        raise HTTPException(
+            status_code=500,
+            detail="Tokenizer not initialized",
+        )
+
+    if not prompt:
+        raise HTTPException(
+            status_code=400,
+            detail="prompt cannot be empty",
+        )
+
+    if not response:
+        raise HTTPException(
+            status_code=400,
+            detail="response cannot be empty",
+        )
 
     full_text = prompt + response
-    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
-    full_ids = tokenizer.encode(full_text, add_special_tokens=False)
+    prompt_char_end = len(prompt)
 
-    response_start = len(prompt_ids)
-    response_ids = full_ids[response_start:]
-    if not response_ids:
-        raise HTTPException(status_code=400, detail="response has no tokens after tokenization")
+    # 使用 offset_mapping 获取每个 token 对应的原文字符区间
+    try:
+        encoded = tokenizer(
+            full_text,
+            add_special_tokens=False,
+            return_offsets_mapping=True,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Tokenizer does not support offset_mapping: {e}",
+        )
+
+    full_ids = list(encoded["input_ids"])
+    offsets = list(encoded["offset_mapping"])
+
+    if not full_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="full_text has no tokens",
+        )
+
+    # 选择与 response 有字符重叠的 token。
+    #
+    # token 区间为 [start, end)
+    # 只要 end > prompt_char_end，就认为它属于 response 部分。
+    #
+    # 这样即使 prompt 和 response 边界发生 BPE 合并，
+    # 也不会再错误地按照 len(prompt_ids) 进行切分。
+    response_positions = [
+        pos
+        for pos, (start, end) in enumerate(offsets)
+        if end > prompt_char_end
+    ]
+
+    if not response_positions:
+        raise HTTPException(
+            status_code=400,
+            detail="response has no tokens after tokenization",
+        )
+
+    response_ids = [
+        full_ids[pos]
+        for pos in response_positions
+    ]
 
     sampling_params = SamplingParams(
         max_tokens=1,
@@ -187,45 +247,73 @@ def _logprobs_for_prompt_response(
         prompt_logprobs=max(1, top_logprobs + 1),
     )
 
-    outputs = llm.generate([full_text], sampling_params, use_tqdm=False)
-    out = outputs[0]
+    outputs = llm.generate(
+        [full_text],
+        sampling_params,
+        use_tqdm=False,
+    )
 
-    # prompt_logprobs: list[dict[token_id, Logprob] | None]，长度约等于 prompt token 数
+    if not outputs:
+        raise HTTPException(
+            status_code=500,
+            detail="vLLM returned no output",
+        )
+
+    out = outputs[0]
     prompt_logprobs = out.prompt_logprobs
+
     if prompt_logprobs is None:
-        raise HTTPException(status_code=500, detail="vLLM did not return prompt_logprobs")
+        raise HTTPException(
+            status_code=500,
+            detail="vLLM did not return prompt_logprobs",
+        )
 
     tokens: list[TokenLogprob] = []
     total_logprob = 0.0
 
-    for pos, token_id in enumerate(response_ids, start=response_start):
-        lp_dict = prompt_logprobs[pos] if pos < len(prompt_logprobs) else None
-        logprob_value: float | None = None
-        if lp_dict is not None and token_id in lp_dict:
-            # vLLM Logprob 对象通常有 .logprob 字段
-            lp_obj = lp_dict[token_id]
-            logprob_value = float(getattr(lp_obj, "logprob", lp_obj))
-            total_logprob += logprob_value
-        else:
-            # 如果目标 token 没在返回的 top logprobs 中，说明 top_logprobs 太小。
-            # prompt_logprobs 至少请求 top_logprobs+1，通常包含真实 token；若没有则记为 None。
-            logprob_value = None
+    for pos, token_id in zip(response_positions, response_ids):
+        if pos >= len(prompt_logprobs):
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"prompt_logprobs index out of range: "
+                    f"pos={pos}, length={len(prompt_logprobs)}"
+                ),
+            )
 
-        tokens.append(TokenLogprob(
-            token=_decode_token(token_id),
-            token_id=int(token_id),
-            logprob=logprob_value,
-        ))
+        lp_dict = prompt_logprobs[pos]
 
-    # 若有 None，total_logprob 只是可见 token 的和；这里选择报错，避免误用。
-    if any(t.logprob is None for t in tokens):
-        raise HTTPException(
-            status_code=500,
-            detail="Some response token logprobs are missing. Increase prompt_logprobs/top_logprobs.",
+        if lp_dict is None or token_id not in lp_dict:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Missing logprob for response token at position {pos}. "
+                    "Increase prompt_logprobs/top_logprobs."
+                ),
+            )
+
+        lp_obj = lp_dict[token_id]
+        logprob_value = float(
+            getattr(lp_obj, "logprob", lp_obj)
         )
 
+        total_logprob += logprob_value
+
+        tokens.append(
+            TokenLogprob(
+                token=_decode_token(token_id),
+                token_id=int(token_id),
+                logprob=logprob_value,
+            )
+        )
+
+    # vLLM 的 logprob 是自然对数 ln(P)
     nll_nats = -total_logprob
+
+    # 转为 bits：
+    # log2(P) = ln(P) / ln(2)
     nll_bits = nll_nats / math.log(2)
+
     avg_nll_bits = nll_bits / len(tokens)
 
     return LogprobsResponse(
