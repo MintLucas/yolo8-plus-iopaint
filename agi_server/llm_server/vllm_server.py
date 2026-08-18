@@ -432,10 +432,6 @@ def init_model(
         tensor_parallel_size=tensor_parallel_size,
         enforce_eager=enforce_eager,
         max_model_len=max_model_len,
-        mm_processor_kwargs={
-            "use_fast": True,
-            "disable_video": True,
-        },
     )
     state.tokenizer = state.llm.get_tokenizer()
     print("[llm_server] model initialized")
