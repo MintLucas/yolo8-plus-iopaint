@@ -180,12 +180,6 @@ def _logprobs_for_prompt_response(
             detail="Tokenizer not initialized",
         )
 
-    if not prompt:
-        raise HTTPException(
-            status_code=400,
-            detail="prompt cannot be empty",
-        )
-
     if not response:
         raise HTTPException(
             status_code=400,
@@ -283,7 +277,16 @@ def _logprobs_for_prompt_response(
 
         lp_dict = prompt_logprobs[pos]
 
-        if lp_dict is None or token_id not in lp_dict:
+        if lp_dict is None:
+            # 第一个 token（prompt="" 时）没有前文，logprob 为 None，跳过
+            tokens.append(TokenLogprob(
+                token=_decode_token(token_id),
+                token_id=int(token_id),
+                logprob=None,
+            ))
+            continue
+
+        if token_id not in lp_dict:
             raise HTTPException(
                 status_code=500,
                 detail=(
@@ -307,6 +310,15 @@ def _logprobs_for_prompt_response(
             )
         )
 
+    # 跳过 logprob 为 None 的 token（如 prompt="" 时的第一个 token）
+    valid_tokens = [t for t in tokens if t.logprob is not None]
+    n_valid = len(valid_tokens)
+    if n_valid == 0:
+        raise HTTPException(
+            status_code=500,
+            detail="No valid token logprobs (all tokens have None logprob).",
+        )
+
     # vLLM 的 logprob 是自然对数 ln(P)
     nll_nats = -total_logprob
 
@@ -314,7 +326,7 @@ def _logprobs_for_prompt_response(
     # log2(P) = ln(P) / ln(2)
     nll_bits = nll_nats / math.log(2)
 
-    avg_nll_bits = nll_bits / len(tokens)
+    avg_nll_bits = nll_bits / n_valid
 
     return LogprobsResponse(
         prompt=prompt,
