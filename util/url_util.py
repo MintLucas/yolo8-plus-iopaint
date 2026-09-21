@@ -1,5 +1,67 @@
 import requests
 import base64
+import ipaddress
+import socket
+from urllib.parse import urlparse
+ 
+def is_safe_url(url, allow_private=False):
+    """
+    校验URL是否安全，防止SSRF攻击。
+    - 禁止非HTTP/HTTPS协议（如file://、gopher://、dict://等）
+    - 默认禁止访问内网/私有IP地址（10.x、172.16-31.x、192.168.x、127.x、169.254.x等）
+    - 对域名做DNS解析后再次校验IP，防止DNS rebinding
+    
+    :param url: 待校验的URL字符串
+    :param allow_private: 是否允许访问内网地址（本地调试时可设为True）
+    :return: (bool, str) 第一个元素为是否安全，第二个元素为原因说明
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        return False, f"URL解析失败: {e}"
+
+    # 1. 协议白名单校验：只允许 http 和 https
+    if parsed.scheme not in ("http", "https"):
+        return False, f"不允许的协议: {parsed.scheme}（仅允许http/https）"
+
+    # 2. 本地文件路径（如 /etc/hosts）直接拒绝
+    if not parsed.netloc:
+        return False, "无效的URL：缺少域名或主机部分"
+
+    hostname = parsed.hostname
+    if not hostname:
+        return False, "无效的URL：无法解析主机名"
+
+    # 3. 如果是IP地址格式，直接校验
+    try:
+        ip_obj = ipaddress.ip_address(hostname)
+        if not allow_private and (ip_obj.is_private or ip_obj.is_loopback or
+                                   ip_obj.is_link_local or ip_obj.is_reserved or
+                                   ip_obj.is_multicast or ip_obj.is_unspecified):
+            return False, f"禁止访问内网/保留地址: {hostname}"
+    except ValueError:
+        # 不是IP格式，是域名，继续做DNS解析校验
+        pass
+
+    # 4. 对域名做DNS解析，校验解析出的IP是否为内网地址（防止DNS rebinding）
+    if not allow_private:
+        try:
+            addr_infos = socket.getaddrinfo(hostname, None)
+            for addr_info in addr_infos:
+                ip_str = addr_info[4][0]
+                try:
+                    ip_obj = ipaddress.ip_address(ip_str)
+                    if ip_obj.is_private or ip_obj.is_loopback or \
+                       ip_obj.is_link_local or ip_obj.is_reserved or \
+                       ip_obj.is_multicast or ip_obj.is_unspecified:
+                        return False, f"域名 {hostname} 解析到内网/保留地址: {ip_str}"
+                except ValueError:
+                    continue
+        except socket.gaierror:
+            return False, f"域名 {hostname} DNS解析失败"
+
+    return True, "URL安全校验通过"
+
 
 def url_to_base64(image_url):
     """

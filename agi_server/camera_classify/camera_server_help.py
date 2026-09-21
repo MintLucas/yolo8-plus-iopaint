@@ -24,7 +24,7 @@ from util.mylogging import get_logger
 import requests
 from util.token_util_new import token_fresh, models_dict
 from util.api_client_new import Api_client
-from util.url_util import url_to_base64
+from util.url_util import url_to_base64, is_safe_url
 from agi_server.cat_rec_star.model_config import Model_config
 from agi_server.cat_rec_star.emoji_check import load_emoticon_dict_from_url,filter_text_emoticons
 class Camera_Server_help:
@@ -100,7 +100,7 @@ class Camera_Server_help:
     async def image_process(self, para_dict):
         """
         单张图片标签提取接口
-        - 输入：图片绝对路径
+        - 输入：图片绝对路径或URL
         - 输出：指定格式的标签结果字典
         """
         # 1. 校验请求参数
@@ -108,7 +108,14 @@ class Camera_Server_help:
         img_path = para_dict["image_info"]
         if not img_path:
             raise HTTPException(status_code=400, detail="图片信息不能为空")
-        
+
+        # 1.1 SSRF安全校验：如果是URL，校验是否为安全的可访问地址
+        if img_path.startswith("http://") or img_path.startswith("https://"):
+            is_safe, reason = is_safe_url(img_path)
+            if not is_safe:
+                self.log.warning(f"SSRF拦截 | 拒绝不安全的URL请求: {img_path} | 原因: {reason}")
+                raise HTTPException(status_code=403, detail=f"不安全的图片URL: {reason}")
+
         # 2. 调用单张处理函数
         result = await asyncio.to_thread(process_single_image, img_path)
         # result = process_single_image(img_path)

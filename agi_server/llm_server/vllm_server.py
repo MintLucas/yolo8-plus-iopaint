@@ -13,6 +13,25 @@ FastAPI + vLLM logprobs 服务
 - /compute_h_y_given_t：直接返回 H(Y|T) bits
 - /batch_logprobs：批量计算，减少 HTTP 往返
 
+动态模型加载
+===========
+vLLM 启动时必须指定模型并加载到显存，没有原生的运行时热切换 base model API。
+本服务通过「销毁旧实例 + 释放显存 + 新建实例」实现单实例热替换：
+- 各业务接口的请求体均带可选 `model` 字段，与当前模型不同则触发热替换；
+- 热替换期间持有 model_lock，并发请求阻塞等待，避免使用半初始化实例；
+- 3B 模型切换通常耗时数秒~十几秒，期间服务不可用；
+- 也可通过 POST /reload_model 显式切换模型。
+
+OOM / 稳定性加固
+================
+logprobs 接口会对整个 prompt 序列做 log_softmax，序列越长临时显存越大，
+叠加 gpu_memory_utilization 把 KV cache 撑满后极易 OOM，导致 EngineCore
+崩溃且不可恢复。本服务做了以下加固：
+- max_request_tokens：单次请求 token 数硬上限，超长直接 413 拒绝；
+- max_concurrent_requests：信号量限流，避免多个 logprobs 临时张量叠加；
+- _safe_generate：统一封装 generate 调用，捕获 OOM / EngineDeadError 后
+  自动销毁并重建 LLM 实例，避免整个进程挂掉只能靠 supervisor 重启。
+
 启动方式
 ========
     bash start_server.sh
@@ -22,11 +41,12 @@ FastAPI + vLLM logprobs 服务
 
 接口
 ====
-1. GET /health
+1. GET  /health
 2. POST /generate
 3. POST /logprobs
 4. POST /compute_h_y_given_t
 5. POST /batch_logprobs
+6. POST /reload_model
 """
 
 from __future__ import annotations
@@ -34,13 +54,20 @@ from __future__ import annotations
 import argparse
 import math
 import os
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from vllm import LLM, SamplingParams
+
+# vLLM v1 引擎死亡异常（EngineCore 崩溃后不可恢复）
+try:
+    from vllm.v1.engine.exceptions import EngineDeadError
+except Exception:  # 老版本或路径变化时降级为通用 Exception
+    EngineDeadError = type("EngineDeadError", (Exception,), {})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -62,6 +89,10 @@ class GenerateRequest(BaseModel):
     temperature: float = 0.0
     top_p: float = 1.0
     logprobs: int | None = None
+    model: str | None = Field(
+        default=None,
+        description="可选，指定模型路径；与当前不同则触发热替换",
+    )
 
 
 class GenerateResponse(BaseModel):
@@ -77,6 +108,10 @@ class LogprobsRequest(BaseModel):
     response: str = Field(..., description="目标文本，例如 gold answer Y")
     temperature: float = 0.0
     top_logprobs: int = 0
+    model: str | None = Field(
+        default=None,
+        description="可选，指定模型路径；与当前不同则触发热替换",
+    )
 
 
 class TokenLogprob(BaseModel):
@@ -112,6 +147,10 @@ class HYGivenTRequest(BaseModel):
     y_answer: str
     instruction: str = "Given the message, output the final answer only."
     temperature: float = 0.0
+    model: str | None = Field(
+        default=None,
+        description="可选，指定模型路径；与当前不同则触发热替换",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +162,27 @@ class ServerState:
     llm: LLM | None = None
     model_path: str = DEFAULT_MODEL_PATH
     tokenizer: Any | None = None
+    # 模型加载配置（启动时由 init_model 写入，热替换时复用）
+    gpu_memory_utilization: float = 0.85
+    tensor_parallel_size: int = 1
+    max_model_len: int = 10000
+    enforce_eager: bool = True
+    # 热替换期间加锁，避免并发请求触发重复加载 / 使用半初始化实例
+    model_lock: threading.Lock = field(default_factory=threading.Lock)
+
+    # ── OOM / 稳定性加固配置 ──────────────────────────────────────
+    # 单次请求允许的最大 token 数（prompt + response）。
+    # logprobs 会对整个序列做 log_softmax，序列越长临时显存越大，
+    # 这里做硬上限，避免单个超长请求把显存打爆。
+    max_request_tokens: int = 4096
+    # 同时进入 vLLM generate 的最大并发数。
+    # 每个 logprobs 请求都会产生 log_softmax 临时张量，并发越高
+    # 临时显存叠加越严重，用信号量串行化/限流。
+    max_concurrent_requests: int = 1
+    # 限流信号量（init_model 时按 max_concurrent_requests 创建）
+    request_semaphore: threading.Semaphore | None = None
+    # OOM / EngineDead 后自动重建实例的锁，避免多个请求同时重建
+    revive_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 state = ServerState()
@@ -137,6 +197,148 @@ def _require_llm() -> LLM:
     if state.llm is None:
         raise HTTPException(status_code=503, detail="LLM not initialized")
     return state.llm
+
+
+def _load_llm(model_path: str) -> LLM:
+    """新建一个 vLLM LLM 实例并加载到显存。复用启动时的加载配置。"""
+    print(f"[llm_server] loading model: {model_path}")
+    llm = LLM(
+        model=model_path,
+        runner="generate",
+        gpu_memory_utilization=state.gpu_memory_utilization,
+        tensor_parallel_size=state.tensor_parallel_size,
+        enforce_eager=state.enforce_eager,
+        max_model_len=state.max_model_len,
+    )
+    print(f"[llm_server] model loaded: {model_path}")
+    return llm
+
+
+def _destroy_llm() -> None:
+    """销毁当前 LLM 实例并尽量释放显存。"""
+    if state.llm is not None:
+        try:
+            del state.llm
+        except Exception:
+            pass
+        state.llm = None
+        state.tokenizer = None
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+    except Exception:
+        pass
+
+
+def _ensure_model(model_path: str | None = None) -> LLM:
+    """
+    返回当前可用的 LLM 实例。
+
+    - model_path 为 None：返回当前实例（若未初始化则 503）。
+    - model_path 与当前一致：直接返回当前实例。
+    - model_path 不同：加锁后销毁旧实例、释放显存、加载新实例（热替换）。
+
+    热替换期间持有 model_lock，并发请求会阻塞等待，避免使用半初始化实例
+    或触发重复加载。3B 模型切换通常耗时数秒~十几秒。
+    """
+    target = model_path or state.model_path
+
+    # 快速路径：无需切换
+    if state.llm is not None and target == state.model_path:
+        return state.llm
+
+    if not target:
+        raise HTTPException(status_code=503, detail="LLM not initialized and no model_path given")
+
+    # 慢路径：热替换，加锁串行化
+    with state.model_lock:
+        # double-check：拿到锁后可能已被其他请求切换到目标模型
+        if state.llm is not None and target == state.model_path:
+            return state.llm
+
+        print(f"[llm_server] switching model: {state.model_path} -> {target}")
+
+        # 销毁旧实例并释放显存
+        _destroy_llm()
+
+        # 加载新实例
+        state.llm = _load_llm(target)
+        state.model_path = target
+        state.tokenizer = state.llm.get_tokenizer()
+        return state.llm
+
+
+def _revive_llm() -> LLM:
+    """
+    在 OOM / EngineDeadError 后自动重建 LLM 实例。
+
+    vLLM v1 的 EngineCore 是独立进程，Worker OOM 后 EngineCore 会死掉且
+    不可恢复（后续请求全部 EngineDeadError）。这里在进程内销毁旧实例、
+    释放显存、重新加载，避免只能靠 supervisor 重启整个进程。
+
+    使用 revive_lock 串行化，避免多个并发请求同时触发重建。
+    """
+    with state.revive_lock:
+        # double-check：拿到锁后可能已被其他请求重建好
+        if state.llm is not None:
+            # 简单存活探测：能拿到 tokenizer 即认为可用
+            try:
+                state.llm.get_tokenizer()
+                return state.llm
+            except Exception:
+                pass
+
+        print("[llm_server] engine dead / OOM, reviving LLM instance ...")
+        _destroy_llm()
+        state.llm = _load_llm(state.model_path)
+        state.tokenizer = state.llm.get_tokenizer()
+        print("[llm_server] LLM instance revived")
+        return state.llm
+
+
+def _safe_generate(
+    llm: LLM,
+    prompts: list[str],
+    sampling_params: SamplingParams,
+):
+    """
+    统一封装 vLLM generate 调用，做两件事：
+
+    1. 信号量限流：限制同时进入 generate 的请求数，避免多个 logprobs
+       请求的 log_softmax 临时张量叠加导致 OOM。
+    2. OOM / EngineDead 自动重建：捕获显存溢出或引擎死亡异常后，
+       自动销毁并重建 LLM 实例，然后重试一次。
+
+    注意：重建后用新实例重试，若仍失败则向上抛出 503。
+    """
+    sem = state.request_semaphore
+    # 信号量可能为 None（未初始化），此时退化为不限流
+    acquire = sem.acquire if sem is not None else (lambda: True)
+    release = sem.release if sem is not None else (lambda: None)
+
+    try:
+        acquire()
+        try:
+            return llm.generate(prompts, sampling_params, use_tqdm=False)
+        finally:
+            release()
+    except (EngineDeadError, RuntimeError) as e:
+        # RuntimeError 常见于 CUDA OOM（torch.OutOfMemoryError 继承自 RuntimeError）
+        msg = str(e)
+        is_oom = "out of memory" in msg.lower() or "OutOfMemory" in type(e).__name__
+        if not is_oom and not isinstance(e, EngineDeadError):
+            raise
+        print(f"[llm_server] generate failed ({type(e).__name__}), attempting revive: {msg[:200]}")
+        release()
+        new_llm = _revive_llm()
+        # 重建后重试一次
+        acquire()
+        try:
+            return new_llm.generate(prompts, sampling_params, use_tqdm=False)
+        finally:
+            release()
 
 
 def _decode_token(token_id: int) -> str:
@@ -157,6 +359,7 @@ def _logprobs_for_prompt_response(
     response: str,
     temperature: float = 0.0,
     top_logprobs: int = 0,
+    model: str | None = None,
 ) -> LogprobsResponse:
     """
     计算 response 在 prompt 条件下的逐 token logprob。
@@ -171,7 +374,7 @@ def _logprobs_for_prompt_response(
         vLLM 返回的是自然对数 logprob，不是 log2。
     """
 
-    llm = _require_llm()
+    llm = _ensure_model(model)
     tokenizer = state.tokenizer
 
     if tokenizer is None:
@@ -211,6 +414,18 @@ def _logprobs_for_prompt_response(
             detail="full_text has no tokens",
         )
 
+    # ── 长度校验：避免超长 prompt 触发 log_softmax 显存暴涨 ──
+    n_tokens = len(full_ids)
+    if n_tokens > state.max_request_tokens:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"Request too long: {n_tokens} tokens > "
+                f"max_request_tokens={state.max_request_tokens}. "
+                f"prompt_logprobs 会对整个序列做 log_softmax，序列过长会 OOM。"
+            ),
+        )
+
     # 选择与 response 有字符重叠的 token。
     #
     # token 区间为 [start, end)
@@ -241,11 +456,7 @@ def _logprobs_for_prompt_response(
         prompt_logprobs=max(1, top_logprobs + 1),
     )
 
-    outputs = llm.generate(
-        [full_text],
-        sampling_params,
-        use_tqdm=False,
-    )
+    outputs = _safe_generate(llm, [full_text], sampling_params)
 
     if not outputs:
         raise HTTPException(
@@ -354,14 +565,14 @@ def health() -> dict[str, Any]:
 
 @app.post("/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest) -> GenerateResponse:
-    llm = _require_llm()
+    llm = _ensure_model(req.model)
     sampling_params = SamplingParams(
         max_tokens=req.max_tokens,
         temperature=req.temperature,
         top_p=req.top_p,
         logprobs=req.logprobs,
     )
-    outputs = llm.generate([req.prompt], sampling_params, use_tqdm=False)
+    outputs = _safe_generate(llm, [req.prompt], sampling_params)
     out = outputs[0].outputs[0]
 
     token_logprobs = None
@@ -390,6 +601,7 @@ def logprobs(req: LogprobsRequest) -> LogprobsResponse:
         response=req.response,
         temperature=req.temperature,
         top_logprobs=req.top_logprobs,
+        model=req.model,
     )
 
 
@@ -401,6 +613,7 @@ def compute_h_y_given_t(req: HYGivenTRequest) -> LogprobsResponse:
         response=req.y_answer,
         temperature=req.temperature,
         top_logprobs=0,
+        model=req.model,
     )
 
 
@@ -412,6 +625,7 @@ def batch_logprobs(req: BatchLogprobsRequest) -> BatchLogprobsResponse:
             response=item.response,
             temperature=item.temperature,
             top_logprobs=item.top_logprobs,
+            model=item.model,
         )
         for item in req.items
     ]
@@ -421,6 +635,21 @@ def batch_logprobs(req: BatchLogprobsRequest) -> BatchLogprobsResponse:
         mean_nll_bits=mean_nll_bits,
         mean_nll_bits_per_sample=mean_nll_bits,
     )
+
+
+class ReloadModelRequest(BaseModel):
+    """显式触发模型热替换。"""
+    model: str = Field(..., description="目标模型路径")
+
+
+@app.post("/reload_model")
+def reload_model(req: ReloadModelRequest) -> dict[str, Any]:
+    """显式切换/重新加载模型，返回切换后的状态。"""
+    _ensure_model(req.model)
+    return {
+        "status": "ok",
+        "model_path": state.model_path,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -433,10 +662,21 @@ def init_model(
     tensor_parallel_size: int,
     max_model_len: int,
     enforce_eager: bool,
+    max_request_tokens: int,
+    max_concurrent_requests: int,
 ) -> None:
     print(f"[llm_server] initializing vLLM model: {model_path}")
     print(f"[llm_server] tensor_parallel_size={tensor_parallel_size}, gpu_memory_utilization={gpu_memory_utilization}")
+    # 缓存加载配置，供后续热替换复用
     state.model_path = model_path
+    state.gpu_memory_utilization = gpu_memory_utilization
+    state.tensor_parallel_size = tensor_parallel_size
+    state.max_model_len = max_model_len
+    state.enforce_eager = enforce_eager
+    state.max_request_tokens = max_request_tokens
+    state.max_concurrent_requests = max_concurrent_requests
+    # 创建限流信号量
+    state.request_semaphore = threading.Semaphore(max_concurrent_requests)
     state.llm = LLM(
         model=model_path,
         runner="generate",
@@ -446,7 +686,8 @@ def init_model(
         max_model_len=max_model_len,
     )
     state.tokenizer = state.llm.get_tokenizer()
-    print("[llm_server] model initialized")
+    print(f"[llm_server] model initialized (max_request_tokens={max_request_tokens}, "
+          f"max_concurrent_requests={max_concurrent_requests})")
 
 
 def parse_args() -> argparse.Namespace:
@@ -454,10 +695,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", type=str, default=os.environ.get("MODEL_PATH", DEFAULT_MODEL_PATH))
     parser.add_argument("--host", type=str, default=os.environ.get("HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
-    parser.add_argument("--gpu-memory-utilization", type=float, default=float(os.environ.get("GPU_MEMORY_UTILIZATION", "0.85")))
+    parser.add_argument("--gpu-memory-utilization", type=float, default=float(os.environ.get("GPU_MEMORY_UTILIZATION", "0.70")))
     parser.add_argument("--tensor-parallel-size", type=int, default=int(os.environ.get("TENSOR_PARALLEL_SIZE", str(DEFAULT_GPU_COUNT))))
     parser.add_argument("--max-model-len", type=int, default=int(os.environ.get("MAX_MODEL_LEN", "10000")))
     parser.add_argument("--enforce-eager", action="store_true", default=os.environ.get("ENFORCE_EAGER", "1") == "1")
+    parser.add_argument("--max-request-tokens", type=int, default=int(os.environ.get("MAX_REQUEST_TOKENS", "4096")),
+                        help="单次请求允许的最大 token 数，超长直接拒绝，避免 logprobs OOM")
+    parser.add_argument("--max-concurrent-requests", type=int, default=int(os.environ.get("MAX_CONCURRENT_REQUESTS", "1")),
+                        help="同时进入 vLLM generate 的最大并发数，限流避免临时显存叠加")
     return parser.parse_args()
 
 
@@ -469,6 +714,8 @@ def main() -> None:
         tensor_parallel_size=args.tensor_parallel_size,
         max_model_len=args.max_model_len,
         enforce_eager=args.enforce_eager,
+        max_request_tokens=args.max_request_tokens,
+        max_concurrent_requests=args.max_concurrent_requests,
     )
     uvicorn.run(app, host=args.host, port=args.port)
 
